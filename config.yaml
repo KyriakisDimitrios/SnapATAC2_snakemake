@@ -1,0 +1,99 @@
+# ==============================================================================
+# PUBLIC CONFIGURATION: Pipeline Logic & Parameters
+# Safe for Version Control
+# ==============================================================================
+
+# --- Import Data (Relative Paths) ---
+import_data:
+    h5ads_output_dir: "00.raw_fragments/"
+    h5ads_output: "00.raw_fragments/{sample}.h5ad"
+    min_num_fragments: 1000
+    n_jobs: 8
+    log: 'Logs/00.raw_fragments_{sample}.log'
+
+# --- Structural Templates (Relative Paths) ---
+structure:
+    subset:
+        dir: "02.subset/"
+        h5ad: "02.subset/{sample}.h5ad"
+        log: "Logs/02.subset_{sample}.log"
+    tile_qc:
+        dir: "01.tiled/"
+        log: "Logs/01.tiled_{sample}.log"
+    feature_qc:
+        dir: "02.feature_qc/"
+        log: "Logs/02.feature_{sample}.log"
+    merge:
+        dir: "03.merged/"
+        AnnDataSet: "03.merged/AnnData_Merged.h5ads"
+        flag: "flags/merge.done"
+        log: "Logs/03.merged.log"
+    batch:
+        dir: "04.batch_correction/"
+        flag: "flags/batch.done"
+        log: "Logs/04.batch_correction.log"
+    clustering:
+        dir: "05.clustering/"
+        h5ad: "05.clustering/Clustered.h5ad.gz"
+        flag: "flags/cluster.done"
+        log: "Logs/05.clustering.log"
+    gem:
+        dir: "06.gem/"
+        h5ad: "06.gem/GEM.h5ad"
+        log: "Logs/06.gem.log"
+    peaks:
+        work_dir: "07.peaks/"
+        h5ad: "07.peaks/Peak_Matrix.h5ad"
+        log: "Logs/07.peaks.log"
+
+# --- Branch Definitions ---
+branches:
+    standard:
+        root: "standard/"
+    metadata:
+        root: "metadata/"
+        constrain:
+            dir: "metadata/01.constrained/"
+    DG_Subset:
+        root: "DG_Subset/"
+        subset:
+            group_by: "subtype_v1"
+            target_subtypes: ['RGL', 'IPC', 'ImGC', 'IntGC', 'mGC']
+        peaks:
+            group_by: "subtype_v1"
+
+# --- Analysis Parameters ---
+analysis_params:
+    tile_qc:
+        h5ad_out: "01.tiled/{sample}_Tiled.h5ad"
+        bin_size: 5000
+        min_tsse: 7
+    feature_qc:
+        filter_lower_quantile: 0.005
+        filter_upper_quantile: 0.005
+        n_features: 200000
+    batch:
+        n_features: 500000
+        max_iter: 1
+        n_iter: 1
+    clustering:
+        resolutions: '0.3,0.5,0.8,1,1.3,1.5,1.8,2'
+    gem:
+        min_cells: 10
+        flavor: 'seurat_v3'
+        batch_key: 'sample'
+        n_top_genes: 3000
+        min_mean: 0.0125
+        max_mean: 3
+        min_disp: 0.5
+        n_jobs: 30
+        organism: 'human'
+        remove_mit: True
+        remove_ribo: False
+        remove_sex_genes: True
+        only_coding_genes: True
+
+# --- Benchmarks ---
+benchmarks:
+    dir: "benchmarks/"
+    summary_file: "Run_Time_Summary.csv"

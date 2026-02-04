@@ -39,7 +39,7 @@ rule merge_std:
     output:
         AnnDataSet = get_res_path(config['standard']['merge']['AnnDataSet']),
         flag = get_res_path(config['standard']['merge']['flag'])
-    log: get_res_path(config['standard']['merge']['log'] + "merge.log")
+    log: get_res_path(config['standard']['merge']['log'])
     conda: '../envs/magic_env.yaml'
     shell:
         "python scripts/3.Merge_AnnData.py {input} {output.AnnDataSet} {output.flag} > {log} 2>&1"
@@ -58,7 +58,7 @@ rule batch_std:
         png1 = get_res_path(config['standard']['batch']['dir'] + "umap_sample.png"),
         png2 = get_res_path(config['standard']['batch']['dir'] + "umap_aft_sample.png"),
         png3 = get_res_path(config['standard']['batch']['dir'] + "umap_aft_leiden.png")
-    log: get_res_path(config['standard']['batch']['log'] + "batch.log")
+    log: get_res_path(config['standard']['batch']['log'])
     conda: '../envs/scanpy_env.yaml'
     shell:
         "python scripts/4.Batch_Correction.py {input.flag} {params.dataset} {params.blacklist} {params.n_feat} {params.max_iter} {params.n_iter} {params.png} {output.png1} {output.png2} {output.png3} {output.flag_out} > {log} 2>&1"
@@ -72,7 +72,7 @@ rule cluster_std:
     output:
         h5ad = get_res_path(config['standard']['clustering']['h5ad']),
         flag = get_res_path(config['standard']['clustering']['flag'])
-    log: get_res_path(config['standard']['clustering']['log'] + "cluster.log")
+    log: get_res_path(config['standard']['clustering']['log'])
     conda: '../envs/scanpy_env.yaml'
     shell:
         "python scripts/5.Clustering.py {input.flag} {params.dataset} {params.res} {params.out_dir} {output.h5ad} {output.flag} > {log} 2>&1"
@@ -97,7 +97,7 @@ rule gem_std:
         coding = config['analysis_params']['gem']['only_coding_genes'],
         meta = config['ensemble_database']
     output: gem = get_res_path(config['standard']['gem']['h5ad'])
-    log: get_res_path(config['standard']['gem']['log'] + "gem.log")
+    log: get_res_path(config['standard']['gem']['log'])
     conda: '../envs/magic_env.yaml'
     shell:
         """

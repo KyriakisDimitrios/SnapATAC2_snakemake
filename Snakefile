@@ -3,11 +3,31 @@
 # Date: January 30, 2026
 
 import os
+configfile: "BICCN_config.yaml"
+
+
+import os
+
+# 1. Load the Public Config (Structure & Logic)
 configfile: "config.yaml"
+
+# 2. Load the Private Config (Sensitive Paths) if it exists
+if os.path.exists("config_private.yaml"):
+    configfile: "config_private.yaml"
+else:
+    # Optional: Warn if running locally without private data
+    print("Warning: 'config_private.yaml' not found. Using defaults/placeholders.")
+
+
 
 # --- Helper ---
 def get_res_path(sub_dir):
     return os.path.join(config['results_dir_path'], sub_dir)
+
+def get_path(branch_name, step, key):
+    root = config['branches'][branch_name]['root']
+    rel_path = config['structure'][step][key]
+    return os.path.join(config['results_dir'], root, rel_path)
 
 SAMPLES = config['samples']
 
