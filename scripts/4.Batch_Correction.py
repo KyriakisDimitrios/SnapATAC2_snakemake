@@ -20,8 +20,7 @@ logging.info("Started: Batch_Correction")
 
 # Inputs from Snakemake
 try:
-    (flag_input,
-     dataset,
+    (h5ad_input,
      path_to_blacklist,
      n_features,
      max_iter,
@@ -30,7 +29,8 @@ try:
      png_sample,
      png_aft_sample,
      png_aft_leiden,
-     flag_output) = sys.argv[1:]
+     flag_output,
+     h5ad_output) = sys.argv[1:]
 
     n_features = int(n_features)
     max_iter = int(max_iter)
@@ -39,8 +39,7 @@ except (IndexError, ValueError):
     logging.error("Not enough arguments provided or incorrect argument types.")
     sys.exit(1)
 
-logging.info(f"Dataset: {dataset}")
-logging.info(f"Flag input: {flag_input}")
+logging.info(f"Dataset: {h5ad_input}")
 logging.info(f"Blacklist: {path_to_blacklist}")
 logging.info(f"Number of features: {n_features}")
 logging.info(f"Max iterations: {max_iter}")
@@ -50,19 +49,23 @@ logging.info(f"Sample PNG: {png_sample}")
 logging.info(f"Sample AFT PNG: {png_aft_sample}")
 logging.info(f"Leiden AFT PNG: {png_aft_leiden}")
 logging.info(f"Flag output: {flag_output}")
+logging.info(f"H5AD output: {h5ad_output}")
 
-dat = snap.read_dataset(dataset)
+dat = snap.read(h5ad_input, backed='r', backend='hdf5')
+adata_copy = dat.copy(filename=h5ad_output, backend=None)
+dat.close()
+
 
 # select features
 logging.info("Selecting features...")
-snap.pp.select_features(dat, n_features=n_features,
+snap.pp.select_features(adata_copy, n_features=n_features,
                         blacklist=path_to_blacklist,
                         max_iter=max_iter,
                         inplace=True,
                         n_jobs=mp.cpu_count() - 2)
 
 logging.info("Running spectral embedding...")
-snap.tl.spectral(dat,
+snap.tl.spectral(adata_copy,
                  features='selected',
                  random_state=0,
                  sample_size=None,
@@ -74,17 +77,17 @@ snap.tl.spectral(dat,
                  inplace=True)
 
 logging.info("Running UMAP (pre-correction)...")
-snap.tl.umap(dat, n_comps=2, use_dims=None, use_rep='X_spectral', key_added='umap',
+snap.tl.umap(adata_copy, n_comps=2, use_dims=None, use_rep='X_spectral', key_added='umap',
              random_state=0, inplace=True)
 
-snap.pl.umap(dat,
+snap.pl.umap(adata_copy,
              color="sample",
              use_rep='X_umap',
              out_file=png_sample)
 
 # batch correction
 logging.info("Running MNC batch correction by sample...")
-snap.pp.mnc_correct(dat,
+snap.pp.mnc_correct(adata_copy,
                     batch="sample",
                     n_neighbors=5,
                     n_clusters=40,
@@ -95,18 +98,18 @@ snap.pp.mnc_correct(dat,
                     inplace=True)
 
 logging.info("Running UMAP (post-correction)...")
-snap.tl.umap(dat, n_comps=2, use_dims=None,
+snap.tl.umap(adata_copy, n_comps=2, use_dims=None,
              use_rep="X_spectral_mnc_sample_region",
              key_added="umap_mnc_sample_region",
              random_state=0, inplace=True)
 
-snap.pl.umap(dat,
+snap.pl.umap(adata_copy,
              color="sample",
              use_rep="X_umap_mnc_sample_region",
              out_file=png_aft_sample)
 
 logging.info("Computing KNN graph and Leiden clustering...")
-snap.pp.knn(dat,
+snap.pp.knn(adata_copy,
             n_neighbors=50,
             use_dims=None,
             use_rep='X_spectral_mnc_sample_region',
@@ -114,12 +117,12 @@ snap.pp.knn(dat,
             inplace=True,
             random_state=0)
 
-snap.tl.leiden(dat)
+snap.tl.leiden(adata_copy)
 
 logging.info("Saving post-correction Leiden UMAP...")
-snap.pl.umap(dat, color='leiden', use_rep="X_umap_mnc_sample_region", out_file=png_aft_leiden)
+snap.pl.umap(adata_copy, color='leiden', use_rep="X_umap_mnc_sample_region", out_file=png_aft_leiden)
 
-dat.close()
+adata_copy.close()
 
 with open(flag_output, 'w') as f:
     pass

@@ -1,9 +1,8 @@
 # --- 1. Standard Branch ---
 rule batch_std:
     input:
-        flag = get_path("standard", "merge", "flag")
+        h5ad_input   = get_path("standard", "add_metadata", "h5ad_output")
     params:
-        dataset   = get_path("standard", "merge", "AnnDataSet"),
         blacklist = config['path_to_blacklist'],
         n_feat    = config['analysis_params']['batch']['n_features'],
         max_iter  = config['analysis_params']['batch']['max_iter'],
@@ -11,6 +10,7 @@ rule batch_std:
         # Eigen Plot (Param because it is an output of the script but not a rule output used downstream)
         png_eigen = report(get_path("standard", "batch", "dir") + "eigen.png", category="Standard", subcategory="Batch")
     output:
+        h5ad_output = get_path("standard","batch","h5ad_output"),
         flag_out = get_path("standard", "batch", "flag"),
         png1     = report(get_path("standard", "batch", "dir") + "umap_sample.png", category="Standard", subcategory="Batch"),
         png2     = report(get_path("standard", "batch", "dir") + "umap_aft_sample.png", category="Standard", subcategory="Batch"),
@@ -21,8 +21,7 @@ rule batch_std:
     shell:
         """
         python scripts/4.Batch_Correction.py \
-        {input.flag} \
-        {params.dataset} \
+        {input.h5ad_input} \
         {params.blacklist} \
         {params.n_feat} \
         {params.max_iter} \
@@ -32,6 +31,7 @@ rule batch_std:
         {output.png2} \
         {output.png3} \
         {output.flag_out} \
+        {output.h5ad_output} \
         > {log} 2>&1
         """
 
