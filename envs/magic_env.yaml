@@ -1,0 +1,23 @@
+name: snapatac2_gem
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  # Core Python (Locking to 3.10 is safe for SnapATAC2/Scanpy)
+  - python=3.10
+  - pip
+
+  # Data Science & Bioinformatics Stack
+  - numpy
+  - pandas
+  - scanpy
+  - python-igraph
+  - leidenalg
+  - plotly
+  # Pip dependencies
+  - pip:
+    - snapatac2          # Often best installed via pip for latest Rust bindings
+    - magic-impute       # Provides 'import magic'
+    - cloudpickle        # Required by hyperopt (fixed dependency conflict)
+    - kaleido
