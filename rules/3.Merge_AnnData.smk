@@ -15,7 +15,7 @@ rule merge_std:
     shell:
         # ORDER MUST MATCH PYTHON UNPACKING:
         # *processed_adatas (All inputs), metadata, output, flag
-        "python scripts/3.Merge_AnnData.py {input.adatas} {input.meta_csv} {output.AnnDataSet} {output.flag} > {log} 2>&1"
+        "python scripts/3.1.Merge_AnnData.py {input.adatas} {input.meta_csv} {output.AnnDataSet} {output.flag} > {log} 2>&1"
 
 
 # --- 2. Metadata Branch ---
@@ -33,7 +33,7 @@ rule merge_meta:
         get_path("metadata", "merge", "log")
     conda: '../envs/magic_env.yaml'
     shell:
-        "python scripts/3.Merge_AnnData.py {input.adatas} {input.meta_csv} {output.AnnDataSet} {output.flag} > {log} 2>&1"
+        "python scripts/3.1.Merge_AnnData.py {input.adatas} {input.meta_csv} {output.AnnDataSet} {output.flag} > {log} 2>&1"
 
 
 # --- 3. DG_Subset Branch ---
@@ -51,4 +51,4 @@ rule merge_DGsub:
         get_path("DG_Subset", "merge", "log")
     conda: '../envs/magic_env.yaml'
     shell:
-        "python scripts/3.Merge_AnnData.py {input.adatas} {input.meta_csv} {output.AnnDataSet} {output.flag} > {log} 2>&1"
+        "python scripts/3.1.Merge_AnnData.py {input.adatas} {input.meta_csv} {output.AnnDataSet} {output.flag} > {log} 2>&1"

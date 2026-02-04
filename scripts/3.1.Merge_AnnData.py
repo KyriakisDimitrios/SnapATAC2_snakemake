@@ -20,12 +20,14 @@ logging.info("Started: Merge AnnData")
 # --- Inputs from Snakemake ---
 try:
     # Unpack all arguments: input files first, then the last two are outputs
-    *processed_adatas, metadata_path,AnnDataSet_path, flag_file = sys.argv[1:]
+    *processed_adatas, metadata_path,annotation_gff3_file,AnnDataSet_path, flag_file = sys.argv[1:]
 except ValueError:
     logging.error("Not enough arguments provided.")
     sys.exit(1)
 
 logging.info(f"Number of input files: {len(processed_adatas)}")
+logging.info(f"Metadata file: {metadata_path}")
+logging.info(f"Annotation gff3 file: {annotation_gff3_file}")
 logging.info(f"AnnDataSet destination: {AnnDataSet_path}")
 logging.info(f"Flag file: {flag_file}")
 
@@ -68,6 +70,10 @@ try:
     # Create unique cell IDs
     unique_cell_ids = [sa + ':' + bc for sa, bc in zip(dat.obs['sample'], dat.obs_names)]
     dat.obs_names = unique_cell_ids
+
+    # Compute TSS enrichment
+    snap.metrics.tsse(dat, annotation_gff3_file)
+    logging.info('Completed: Compute TSS enrichment')
 
     # Validation
     assert dat.n_obs == np.unique(dat.obs_names).size
