@@ -31,6 +31,7 @@ rule feature_qc_std:
     shell:
         "python scripts/2.Feature_QC.py {input.adatas} {params.low} {params.high} {params.n} {output.features_out} > {log} 2>&1"
 
+
 rule merge_std:
     input:
         expand(get_res_path(config['standard']['feature_qc']['dir'] + "{sample}.h5ad"), sample=SAMPLES),
