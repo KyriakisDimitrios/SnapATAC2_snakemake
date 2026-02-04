@@ -18,15 +18,20 @@ start_time = time.time()
 logging.info("Started: Merge AnnData")
 
 # --- Inputs from Snakemake ---
+# --- Inputs from Snakemake ---
 try:
-    # Unpack all arguments: input files first, then the last two are outputs
-    *processed_adatas, metadata_path,annotation_gff3_file,AnnDataSet_path, flag_file = sys.argv[1:]
-except ValueError:
-    logging.error("Not enough arguments provided.")
+    # Unpack all arguments
+    annotation_gff3_file = sys.argv[1]
+    AnnDataSet_path = sys.argv[2]      # <--- FIXED: Removed the trailing comma
+    flag_file = sys.argv[3]
+    processed_adatas = sys.argv[4:]    # Captures all remaining file paths
+except Exception as e:
+    # Changed to catch generic Exception to see the real error if it happens again
+    logging.error(f"Argument parsing failed: {e}")
     sys.exit(1)
 
+
 logging.info(f"Number of input files: {len(processed_adatas)}")
-logging.info(f"Metadata file: {metadata_path}")
 logging.info(f"Annotation gff3 file: {annotation_gff3_file}")
 logging.info(f"AnnDataSet destination: {AnnDataSet_path}")
 logging.info(f"Flag file: {flag_file}")
@@ -54,22 +59,6 @@ try:
 
     logging.info(f'Number of cells: {dat.n_obs}')
     logging.info(f'Number of unique barcodes: {np.unique(dat.obs_names).size}')
-
-    # Import Metadata
-    meta_df = pd.read_csv(metadata_path, index_col='Unnamed: 0')
-    meta_df['CellID'] = meta_df.index
-    meta_subset = meta_df.reindex(dat.obs_names)
-    for col in meta_subset.columns:
-        series = meta_subset[col]
-        if series.dtype == 'object' or series.dtype.name == 'category':
-            values = series.astype(str).values
-        else:
-            values = series.values
-        dat.obs[col] = values
-    
-    # Create unique cell IDs
-    unique_cell_ids = [sa + ':' + bc for sa, bc in zip(dat.obs['sample'], dat.obs_names)]
-    dat.obs_names = unique_cell_ids
 
     # Compute TSS enrichment
     snap.metrics.tsse(dat, annotation_gff3_file)
