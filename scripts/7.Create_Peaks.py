@@ -1,3 +1,10 @@
+# Important note
+# You read the object like this otherwise 0 vars (No peaks output)
+# data = snap.read(h5ad_input, backed=None)
+# snap.tl.macs3(data, groupby=groupby)
+# peaks_df = snap.tl.merge_peaks(data.uns['macs3'], snap.genome.hg38)
+# peak_mat = snap.pp.make_peak_matrix(data, use_rep=peaks_df['Peaks'],file=peaks_output_h5ad,backend='hdf5')
+
 import sys
 import os
 import logging
@@ -80,15 +87,9 @@ def main():
 
     # --- 5. Create Peak Matrix ---
     logging.info('Creating cell-by-peak matrix...')
-    peak_mat = snap.pp.make_peak_matrix(
-        data,
-        peaks=merged_peaks_list,
-        file=peaks_output_h5ad,
-        backend='hdf5'
-    )
+    peak_mat = snap.pp.make_peak_matrix(data, use_rep=peaks_df['Peaks'],file=peaks_output_h5ad,backend='hdf5')
 
     peak_mat.close()
-    data.close()
 
     end_time = time.time()
     logging.info(f"Completed in {end_time - start_time:.2f}s")
