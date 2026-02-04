@@ -19,6 +19,6 @@ include: 'rules/DG_subset.smk'
 # --- DRIVER RULE ---
 rule all:
     input:
-        get_res_path(config['standard']['gem']['h5ad']),
-        get_res_path(config['metadata']['gem']['h5ad']),
+        # get_res_path(config['standard']['gem']['h5ad']),
+        # get_res_path(config['metadata']['gem']['h5ad']),
         get_res_path(config['DG_Subset']['peaks']['h5ad'])

@@ -26,7 +26,7 @@ rule merge_DGsub:
     output:
         AnnDataSet = get_res_path(config['DG_Subset']['merge']['AnnDataSet']),
         flag = get_res_path(config['DG_Subset']['merge']['flag'])
-    log: get_res_path(config['DG_Subset']['merge']['log'] + "merge.log")
+    log: get_res_path(config['DG_Subset']['merge']['log'])
     conda: '../envs/magic_env.yaml'
     shell:
         "python scripts/3.Merge_AnnData.py {input} {output.AnnDataSet} {output.flag} > {log} 2>&1"
@@ -45,7 +45,7 @@ rule batch_DGsub:
         png1 = report(get_res_path(config['DG_Subset']['batch']['dir'] + "umap_sample.png"),category="CommonSamples",subcategory='BatchCorrection'),
         png2 = report(get_res_path(config['DG_Subset']['batch']['dir'] + "umap_aft_sample.png"),category="CommonSamples",subcategory='BatchCorrection'),
         png3 = report(get_res_path(config['DG_Subset']['batch']['dir'] + "umap_aft_leiden.png"),category="CommonSamples",subcategory='BatchCorrection')
-    log: get_res_path(config['DG_Subset']['batch']['log'] + "batch.log")
+    log: get_res_path(config['DG_Subset']['batch']['log'])
     conda: '../envs/scanpy_env.yaml'
     shell:
         "python scripts/4.Batch_Correction.py {input.flag} {params.dataset} {params.blacklist} {params.n_feat} {params.max_iter} {params.n_iter} {params.png} {output.png1} {output.png2} {output.png3} {output.flag_out} > {log} 2>&1"
@@ -59,7 +59,7 @@ rule cluster_DGsub:
     output:
         h5ad = get_res_path(config['DG_Subset']['clustering']['h5ad']),
         flag = get_res_path(config['DG_Subset']['clustering']['flag'])
-    log: get_res_path(config['DG_Subset']['clustering']['log'] + "cluster.log")
+    log: get_res_path(config['DG_Subset']['clustering']['log'])
     conda: '../envs/scanpy_env.yaml'
     shell:
         "python scripts/5.Clustering.py {input.flag} {params.dataset} {params.res} {params.out_dir} {output.h5ad} {output.flag} > {log} 2>&1"
@@ -84,7 +84,7 @@ rule gem_DGsub:
         coding = config['analysis_params']['gem']['only_coding_genes'],
         meta = config['ensemble_database']
     output: gem = get_res_path(config['DG_Subset']['gem']['h5ad'])
-    log: get_res_path(config['DG_Subset']['gem']['log'] + "gem.log")
+    log: get_res_path(config['DG_Subset']['gem']['log'])
     conda: '../envs/magic_env.yaml'
     shell:
         """
