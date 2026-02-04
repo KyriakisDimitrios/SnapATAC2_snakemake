@@ -21,7 +21,8 @@ rule subset_DGsub:
         "python scripts/subset_celltypes.py {input.adata} {wildcards.sample} {params.annotation} {params.target_subtypes} {params.group_by} {params.bin_size} {output.subset} > {log} 2>&1"
 
 rule merge_DGsub:
-    input: expand(get_res_path(config['DG_Subset']['subset']['dir'] + "{sample}.h5ad"), sample=SAMPLES)
+    input: expand(get_res_path(config['DG_Subset']['subset']['dir'] + "{sample}.h5ad"), sample=SAMPLES),
+        metadata_path= config['metadata_path']
     output:
         AnnDataSet = get_res_path(config['DG_Subset']['merge']['AnnDataSet']),
         flag = get_res_path(config['DG_Subset']['merge']['flag'])

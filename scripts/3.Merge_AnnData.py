@@ -20,7 +20,7 @@ logging.info("Started: Merge AnnData")
 # --- Inputs from Snakemake ---
 try:
     # Unpack all arguments: input files first, then the last two are outputs
-    *processed_adatas, AnnDataSet_path,metadata_path, flag_file = sys.argv[1:]
+    *processed_adatas, metadata_path,AnnDataSet_path, flag_file = sys.argv[1:]
 except ValueError:
     logging.error("Not enough arguments provided.")
     sys.exit(1)

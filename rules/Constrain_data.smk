@@ -16,7 +16,9 @@ rule constrain_meta:
         "python scripts/constrain_data.py {input.adata} {wildcards.sample} {params.annotation} {params.bin_size} {output.subset} > {log} 2>&1"
 
 rule merge_meta:
-    input: expand(get_res_path(config['metadata']['constrain']['dir'] + "{sample}.h5ad"), sample=SAMPLES)
+    input:
+        expand(get_res_path(config['metadata']['constrain']['dir'] + "{sample}.h5ad"), sample=SAMPLES),
+        metadata_path= config['metadata_path']
     output:
         AnnDataSet = get_res_path(config['metadata']['merge']['AnnDataSet']),
         flag = get_res_path(config['metadata']['merge']['flag'])
