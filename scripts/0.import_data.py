@@ -22,11 +22,10 @@ def run_import():
     # Inputs from Snakemake positional arguments
     try:
         frags = sys.argv[1]
-        metadata_path = sys.argv[2]
-        sample_name = sys.argv[3]
-        min_frags = int(sys.argv[4])
-        n_jobs = int(sys.argv[5])
-        output_file = sys.argv[6]
+        sample_name = sys.argv[2]
+        min_frags = int(sys.argv[3])
+        n_jobs = int(sys.argv[4])
+        output_file = sys.argv[5]
     except IndexError:
         logger.error("Missing arguments. Expected: frags, metadata_path, sample_name, min_frags, n_jobs, output_file")
         sys.exit(1)
@@ -48,44 +47,8 @@ def run_import():
         )
         logging.info("Merging metadata columns...")
         adata.obs_names = [f"{bc}_{sample_name}" for bc in adata.obs_names]
-        meta_df = pd.read_csv(metadata_path, index_col='Unnamed: 0')
-        meta_df['CellID'] = meta_df.index
-        meta_subset = meta_df.reindex(adata.obs_names)
-        for col in meta_subset.columns:
-            series = meta_subset[col]
-            if series.dtype == 'object' or series.dtype.name == 'category':
-                values = series.astype(str).values
-            else:
-                values = series.values
-            adata.obs[col] = values
-
-        # The join happens on the Index automatically
-        #adata.obs = adata.obs.join(meta_df, how='left')
 
         adata.close()
-
-
-
-        # adata = sc.read_h5ad(output_file)
-        # logging.info(f"Renaming observations with suffix _{sample_name}...")
-        # adata.obs_names = [f"{bc}_{sample_name}" for bc in adata.obs_names]
-        #
-        # # --- 2. Load Metadata ---
-        # logging.info(f"Loading metadata from {metadata_path}...")
-        # meta_df = pd.read_csv(metadata_path, index_col='Unnamed: 0')
-        # meta_df['CellID'] = meta_df.index
-        # if ':' in adata.obs_names[0]:
-        #     logging.info("Detected merge prefix in adata index. Cleaning...")
-        #     # Split by ':' and take the second part (the real barcode_sample)
-        #     clean_index = adata.obs_names.to_series().str.split(':').str[1]
-        #     adata.obs_names = clean_index
-        #
-        # # 4. Merge
-        # logging.info("Merging metadata columns...")
-        # # The join happens on the Index automatically
-        # adata.obs = adata.obs.join(meta_df, how='left')
-        # adata.write(output_file)
-
         logger.info("Completed: Import Fragments")
     except Exception as e:
         logger.error(f"Failed to import fragments: {str(e)}")
