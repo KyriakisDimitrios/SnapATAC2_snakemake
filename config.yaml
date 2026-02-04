@@ -48,12 +48,21 @@ structure:
 
 # --- Branch Definitions ---
 branches:
+    # --- Branch A: Standard ---
     standard:
         root: "standard/"
+        peaks:
+            group_by: "leiden"  # <--- NEW: Define grouping (usually clusters)
+
+    # --- Branch B: Metadata ---
     metadata:
         root: "metadata/"
         constrain:
             dir: "metadata/01.constrained/"
+        peaks:
+            group_by: "leiden"  # <--- NEW: Define grouping
+
+    # --- Branch C: DG Subset ---
     DG_Subset:
         root: "DG_Subset/"
         subset:
