@@ -25,7 +25,7 @@ rule merge_meta:
     log: get_res_path(config['metadata']['merge']['log'])
     conda: '../envs/magic_env.yaml'
     shell:
-        "python scripts/3.Merge_AnnData.py {input} {output.AnnDataSet} {output.flag} > {log} 2>&1"
+        "python scripts/3.1.Merge_AnnData.py {input} {output.AnnDataSet} {output.flag} > {log} 2>&1"
 
 rule batch_meta:
     input: flag = get_res_path(config['metadata']['merge']['flag'])

@@ -2,39 +2,81 @@
 # BRANCH A: STANDARD QC (Data Driven)
 # Flow: Import -> Tile_QC -> Feature_QC -> Merge -> Batch -> Cluster -> GEM
 # ==============================================================================
+rule import_data:
+    input:
+        frags = os.path.join(config['cellranger_dir'], "{sample}/outs/atac_fragments.tsv.gz"),
+        metadata_path = config['metadata_path']
+    params:
+        min_num_fragments = config['import_data']['min_num_fragments'],
+        n_jobs = config['import_data']['n_jobs']
+    output:
+        h5ad = os.path.join(config['results_dir_path'], config['import_data']['h5ads_output_dir'], "{sample}.h5ad")
+    log:
+        log = os.path.join(config['results_dir_path'], config['import_data']['log'], "0.import_data_{sample}.log")
+    conda: '../envs/magic_env.yaml'
+    shell:
+        "python scripts/0.import_data_BICCN.py {input.frags} {input.metadata_path} {wildcards.sample} {params.min_num_fragments} {params.n_jobs} {output.h5ad}  > {log} 2>&1"
 
+# --- 1. Tile & QC (Standard Branch) ---
 rule tile_qc_std:
     input:
-        adatas = get_res_path(config['import_data']['h5ads_output_dir'] + "{sample}.h5ad"),
+        # FIX: Must match rule import_data output exactly
+        adatas = os.path.join(config['results_dir_path'], config['import_data']['h5ads_output_dir'], "{sample}.h5ad"),
         annotation_gff3_file = config['genome_annot']
     output:
-        tiled = get_res_path(config['standard']['tile_qc']['dir'] + "{sample}_Tiled.h5ad")
+        tiled = get_path("standard", "tile_qc", "h5ad_out")
     params:
         min_tsse = config['analysis_params']['tile_qc']['min_tsse'],
         bin_size = config['analysis_params']['tile_qc']['bin_size']
-    log: get_res_path(config['standard']['tile_qc']['log'] + "{sample}.log")
+    log:
+        get_path("standard", "tile_qc", "log")
     conda: '../envs/magic_env.yaml'
     shell:
-        "python scripts/1.Tile_QC.py {input.adatas} {input.annotation_gff3_file} {params.min_tsse} {params.bin_size} {output.tiled} > {log} 2>&1"
+        """
+        python scripts/1.Tile_QC.py \
+        {input.adatas} \
+        {input.annotation_gff3_file} \
+        {params.min_tsse} \
+        {params.bin_size} \
+        {output.tiled} \
+        > {log} 2>&1
+        """
 
+# --- 2. Feature Selection (Standard Branch) ---
 rule feature_qc_std:
     input:
-        adatas = get_res_path(config['standard']['tile_qc']['dir'] + "{sample}_Tiled.h5ad")
+        # Input is the output of the previous rule
+        adatas = get_path("standard", "tile_qc", "h5ad_out")
     params:
-        low = config['analysis_params']['feature_qc']['filter_lower_quantile'],
+        low  = config['analysis_params']['feature_qc']['filter_lower_quantile'],
         high = config['analysis_params']['feature_qc']['filter_upper_quantile'],
-        n = config['analysis_params']['feature_qc']['n_features']
+        n    = config['analysis_params']['feature_qc']['n_features']
     output:
-        features_out = get_res_path(config['standard']['feature_qc']['dir'] + "{sample}.h5ad")
-    log: get_res_path(config['standard']['feature_qc']['log'] + "{sample}.log")
+        # Resolves to: results/standard/02.feature_qc/{sample}.h5ad
+        # Note: We map this to the "feature_qc" structure definition
+        features_out = os.path.join(get_path("standard", "feature_qc", "dir"), "{sample}.h5ad")
+    log:
+        get_path("standard", "feature_qc", "log")
     conda: '../envs/magic_env.yaml'
     shell:
-        "python scripts/2.Feature_QC.py {input.adatas} {params.low} {params.high} {params.n} {output.features_out} > {log} 2>&1"
+        """
+        python scripts/2.Feature_QC.py \
+        {input.adatas} \
+        {params.low} \
+        {params.high} \
+        {params.n} \
+        {output.features_out} \
+        > {log} 2>&1
+        """
+
 
 
 rule merge_std:
     input:
-        expand(get_res_path(config['standard']['feature_qc']['dir'] + "{sample}.h5ad"), sample=SAMPLES),
+        adatas=expand(
+            get_path("standard","feature_qc","dir") + "{sample}.h5ad",
+            sample=config['samples']
+        ),
         metadata_path = config['metadata_path']
     output:
         AnnDataSet = get_res_path(config['standard']['merge']['AnnDataSet']),
@@ -44,24 +86,65 @@ rule merge_std:
     shell:
         "python scripts/3.Merge_AnnData.py {input} {output.AnnDataSet} {output.flag} > {log} 2>&1"
 
+
+# --- 1. Standard Branch ---
 rule batch_std:
-    input: flag = get_res_path(config['standard']['merge']['flag'])
+    input:
+        h5ad_input   = get_path("standard", "add_metadata", "h5ad_output")
     params:
-        dataset = get_res_path(config['standard']['merge']['AnnDataSet']),
+        batch_var = config['analysis_params']['batch']['batch_var'],
         blacklist = config['path_to_blacklist'],
-        n_feat = config['analysis_params']['batch']['n_features'],
-        max_iter = config['analysis_params']['batch']['max_iter'],
-        n_iter = config['analysis_params']['batch']['n_iter'],
-        png = get_res_path(config['standard']['batch']['dir'] + "eigen.png")
+        n_feat    = config['analysis_params']['batch']['n_features'],
+        max_iter  = config['analysis_params']['batch']['max_iter'],
+        n_iter    = config['analysis_params']['batch']['n_iter'],
+        # Eigen Plot (Param because it is an output of the script but not a rule output used downstream)
+        png_eigen = report(get_path("standard", "batch", "dir") + "eigen.png", category="Standard", subcategory="Batch")
     output:
-        flag_out = get_res_path(config['standard']['batch']['flag']),
-        png1 = get_res_path(config['standard']['batch']['dir'] + "umap_sample.png"),
-        png2 = get_res_path(config['standard']['batch']['dir'] + "umap_aft_sample.png"),
-        png3 = get_res_path(config['standard']['batch']['dir'] + "umap_aft_leiden.png")
-    log: get_res_path(config['standard']['batch']['log'])
-    conda: '../envs/scanpy_env.yaml'
+        h5ad_output = get_path("standard","batch","h5ad_output"),
+        flag_out = get_path("standard", "batch", "flag"),
+        png1     = report(get_path("standard", "batch", "dir") + "umap_sample.png", category="Standard", subcategory="Batch"),
+        png2     = report(get_path("standard", "batch", "dir") + "umap_aft_sample.png", category="Standard", subcategory="Batch"),
+        png3     = report(get_path("standard", "batch", "dir") + "umap_aft_leiden.png", category="Standard", subcategory="Batch")
+    log:
+        get_path("standard", "batch", "log")
+    conda: '../envs/scanpy_env.yaml' # Assuming magic_env contains snapatac2/scanpy
     shell:
-        "python scripts/4.Batch_Correction.py {input.flag} {params.dataset} {params.blacklist} {params.n_feat} {params.max_iter} {params.n_iter} {params.png} {output.png1} {output.png2} {output.png3} {output.flag_out} > {log} 2>&1"
+        """
+        python scripts/4.Batch_Correction.py \
+        {input.h5ad_input} \
+        {params.batch_var} \
+        {params.blacklist} \
+        {params.n_feat} \
+        {params.max_iter} \
+        {params.n_iter} \
+        {params.png_eigen} \
+        {output.png1} \
+        {output.png2} \
+        {output.png3} \
+        {output.flag_out} \
+        {output.h5ad_output} \
+        > {log} 2>&1
+        """
+
+# rule batch_std:
+#     input: flag = get_res_path(config['standard']['merge']['flag'])
+#     params:
+#         dataset = get_res_path(config['standard']['merge']['AnnDataSet']),
+#         blacklist = config['path_to_blacklist'],
+#         n_feat = config['analysis_params']['batch']['n_features'],
+#         max_iter = config['analysis_params']['batch']['max_iter'],
+#         n_iter = config['analysis_params']['batch']['n_iter'],
+#         png = get_res_path(config['standard']['batch']['dir'] + "eigen.png")
+#     output:
+#         flag_out = get_res_path(config['standard']['batch']['flag']),
+#         png1 = get_res_path(config['standard']['batch']['dir'] + "umap_sample.png"),
+#         png2 = get_res_path(config['standard']['batch']['dir'] + "umap_aft_sample.png"),
+#         png3 = get_res_path(config['standard']['batch']['dir'] + "umap_aft_leiden.png")
+#     log: get_res_path(config['standard']['batch']['log'])
+#     conda: '../envs/scanpy_env.yaml'
+#     shell:
+#         "python scripts/4.Batch_Correction.py {input.flag} {params.dataset} {params.blacklist} {params.n_feat} {params.max_iter} {params.n_iter} {params.png} {output.png1} {output.png2} {output.png3} {output.flag_out} > {log} 2>&1"
+
 
 rule cluster_std:
     input: flag = get_res_path(config['standard']['batch']['flag'])
