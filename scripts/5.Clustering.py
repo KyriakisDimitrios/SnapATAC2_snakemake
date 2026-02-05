@@ -19,19 +19,17 @@ logging.info("Started: Clustering")
 
 # --- Argument Parsing ---
 try:
-    flag_input = sys.argv[1]
-    dataset = sys.argv[2]
-    resolutions_str = sys.argv[3]
-    clustering_mnc = sys.argv[4]
-    output_h5ad_path = sys.argv[5]
-    flag_output = sys.argv[6]
+    h5ad_input = sys.argv[1]
+    resolutions_str = sys.argv[2]
+    clustering_mnc = sys.argv[3]
+    h5ad_output = sys.argv[4]
 except IndexError:
     logging.error("Not enough arguments provided.")
     sys.exit(1)
 
-logging.info(f"Dataset: {dataset}")
+logging.info(f"Dataset: {h5ad_input}")
 logging.info(f"Resolutions: {resolutions_str}")
-logging.info(f"Output path: {output_h5ad_path}")
+logging.info(f"Output path: {h5ad_output}")
 
 # Create output directory
 if not os.path.exists(clustering_mnc):
@@ -41,7 +39,17 @@ if not os.path.exists(clustering_mnc):
 resolutions = [float(x.strip()) for x in resolutions_str.split(',')]
 
 # --- Execution ---
-dat = snap.read_dataset(dataset)
+
+
+dat = snap.read_dataset(h5ad_input)
+# 2. Convert to a single AnnData object (Loads into RAM)
+adata = dat.to_adata()
+dat.close()
+# 3. Write to a single .h5ad file
+adata.write(h5ad_output)
+
+dat = snap.read_dataset(h5ad_output)
+
 logging.info("Dataset loaded.")
 
 for resolution in resolutions:
@@ -82,12 +90,7 @@ adat = dat.to_adata()
 dat.close()
 
 # Save output
-adat.write_h5ad(output_h5ad_path, compression="gzip")
-logging.info(f"AnnData saved to {output_h5ad_path}")
-
-# Create flag file
-with open(flag_output, 'w') as f:
-    pass
+logging.info(f"AnnData saved to {h5ad_output}")
 
 end_time = time.time()
 duration = end_time - start_time

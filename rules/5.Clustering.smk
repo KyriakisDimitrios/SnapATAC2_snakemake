@@ -1,28 +1,22 @@
 # --- 1. Standard Branch ---
 rule cluster_std:
     input:
-        flag = get_path("standard", "batch", "flag")
+        h5ad_input = get_path("standard","batch","h5ad_output"),
     params:
-        # Note: Clustering reads the merged file (which was modified in-place by Batch Correction)
-        dataset = get_path("standard", "merge", "AnnDataSet"),
         res     = config['analysis_params']['clustering']['resolutions'],
         out_dir = get_path("standard", "clustering", "dir")
     output:
-        h5ad = get_path("standard", "clustering", "h5ad"),
-        flag = get_path("standard", "clustering", "flag")
+        h5ad_output = get_path("standard", "clustering", "h5ad"),
     log:
         get_path("standard", "clustering", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/scanpy_env.yaml'
     shell:
         """
         python scripts/5.Clustering.py \
-        {input.flag} \
-        {params.dataset} \
+        {input.h5ad_input} \
         {params.res} \
         {params.out_dir} \
-        {output.h5ad} \
-        {output.flag} \
-        > {log} 2>&1
+        {output.h5ad_output} > {log} 2>&1
         """
 
 # --- 2. Metadata Branch ---
@@ -38,7 +32,7 @@ rule cluster_meta:
         flag = get_path("metadata", "clustering", "flag")
     log:
         get_path("metadata", "clustering", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/scanpy_env.yaml'
     shell:
         """
         python scripts/5.Clustering.py \
@@ -64,7 +58,7 @@ rule cluster_DGsub:
         flag = get_path("DG_Subset", "clustering", "flag")
     log:
         get_path("DG_Subset", "clustering", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/scanpy_env.yaml'
     shell:
         """
         python scripts/5.Clustering.py \
