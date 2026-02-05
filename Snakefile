@@ -33,12 +33,19 @@ SAMPLES = config['samples']
 
 # --- RULE 0: SHARED IMPORT ---
 include: 'rules/0.import_data.smk'
-include: 'rules/Standard_pipeline.smk'
-include: 'rules/Constrain_data.smk'
-include: 'rules/DG_subset.smk'
+include: 'rules/1.Tile_QC.smk'
+include: 'rules/2.Feature_QC.smk'
+include: 'rules/3.Merge_AnnData.smk'
+include: 'rules/4.Batch_Correction.smk'
+include: 'rules/5.Clustering.smk'
+include: 'rules/6.Create_GEM.smk'
+
+# include: 'rules/Standard_pipeline.smk'
+# include: 'rules/Constrain_data.smk'
+# include: 'rules/DG_subset.smk'
 # --- DRIVER RULE ---
 rule all:
     input:
         # get_res_path(config['standard']['gem']['h5ad']),
         # get_res_path(config['metadata']['gem']['h5ad']),
-        get_res_path(config['DG_Subset']['peaks']['h5ad'])
+        get_res_path(config['DG_Subset']['gem']['h5ad'])

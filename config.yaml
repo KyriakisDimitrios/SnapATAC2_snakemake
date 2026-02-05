@@ -19,17 +19,28 @@ structure:
         log: "Logs/02.subset_{sample}.log"
     tile_qc:
         dir: "01.tiled/"
+        h5ad_out: "01.tiled/{sample}_Tiled.h5ad"
         log: "Logs/01.tiled_{sample}.log"
     feature_qc:
         dir: "02.feature_qc/"
         log: "Logs/02.feature_{sample}.log"
+    subset_DGsub:
+        dir: "02.subset_DGsub/"
+        h5ad_out: "02.subset_DGsub/{sample}_subsetDG.h5ad"
+        log: "Logs/02.subset_DGsub_{sample}_subsetDG.log"
     merge:
-        dir: "03.merged/"
-        AnnDataSet: "03.merged/AnnData_Merged.h5ads"
-        flag: "flags/merge.done"
-        log: "Logs/03.merged.log"
+        dir: "03.1.merged/"
+        AnnDataSet: "03.1.merged/AnnData_Merged.h5ads"
+        flag: "flags/03.1.merge.done"
+        log: "Logs/03.1.merged.log"
+    add_metadata:
+        dir: "03.2.add_metadata/"
+        h5ad_output: "03.2.add_metadata/Merged_WithMetadata.h5ad"
+        log: "Logs/03.2.add_metadata.log"
     batch:
         dir: "04.batch_correction/"
+        batch_var: 'donor'
+        h5ad_output: "04.batch_correction/Merged_WithMetadata_Batch.h5ad"
         flag: "flags/batch.done"
         log: "Logs/04.batch_correction.log"
     clustering:
@@ -66,8 +77,10 @@ branches:
     DG_Subset:
         root: "DG_Subset/"
         subset:
+            output_file:
             group_by: "subtype_v1"
             target_subtypes: ['RGL', 'IPC', 'ImGC', 'IntGC', 'mGC']
+            log: "Logs/Subsetting/DG_Subset_{sample}.log"
         peaks:
             group_by: "subtype_v1"
 
@@ -82,6 +95,7 @@ analysis_params:
         filter_upper_quantile: 0.005
         n_features: 200000
     batch:
+        batch_var: 'sample'
         n_features: 500000
         max_iter: 1
         n_iter: 1
