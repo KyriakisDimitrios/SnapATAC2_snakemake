@@ -74,7 +74,9 @@ try:
 
     # Carry over UMAP from integration step
     if "X_umap_mnc_sample_region" in data.obsm:
-        adata.obsm["X_umap"] = data.obsm["X_umap_mnc_sample_region"]
+        adata.obsm["X_umap_mnc_sample_region"] = data.obsm["X_umap_mnc_sample_region"]
+    if "X_umap" in data.obsm:
+        adata.obsm["X_umap"] = data.obsm["X_umap"]
     else:
         logging.warning("X_umap_mnc_sample_region not found in input data.")
 

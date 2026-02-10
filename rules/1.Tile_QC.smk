@@ -4,11 +4,12 @@ rule tile_qc_std:
         # FIX: Must match rule import_data output exactly
         adatas = os.path.join(config['results_dir_path'], config['import_data']['h5ads_output_dir'], "{sample}.h5ad"),
         annotation_gff3_file = config['genome_annot']
-    output:
-        tiled = get_path("standard", "tile_qc", "h5ad_out")
     params:
-        min_tsse = config['analysis_params']['tile_qc']['min_tsse'],
-        bin_size = config['analysis_params']['tile_qc']['bin_size']
+        min_tsse=config['analysis_params']['tile_qc']['min_tsse'],
+        bin_size=config['analysis_params']['tile_qc']['bin_size']
+    output:
+        tiled = get_path("standard", "tile_qc", "h5ad_out"),
+        raw_stats= get_path("standard", "tile_qc", "raw_qc")
     log:
         get_path("standard", "tile_qc", "log")
     conda: '../envs/magic_env.yaml'
@@ -20,6 +21,7 @@ rule tile_qc_std:
         {params.min_tsse} \
         {params.bin_size} \
         {output.tiled} \
+        {output.raw_stats} \
         > {log} 2>&1
         """
 #

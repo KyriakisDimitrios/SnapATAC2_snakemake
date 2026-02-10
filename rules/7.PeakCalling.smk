@@ -11,7 +11,7 @@ rule create_peaks_std:
         peaks = get_path("standard", "peaks", "h5ad")
     log:
         get_path("standard", "peaks", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         """
         python scripts/7.Create_Peaks.py \
@@ -35,7 +35,7 @@ rule create_peaks_meta:
         peaks = get_path("metadata", "peaks", "h5ad")
     log:
         get_path("metadata", "peaks", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         """
         python scripts/7.Create_Peaks.py \
@@ -60,7 +60,7 @@ rule create_peaks_DGsub:
         peaks = get_path("DG_Subset", "peaks", "h5ad")
     log:
         get_path("DG_Subset", "peaks", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         """
         python scripts/7.Create_Peaks.py \

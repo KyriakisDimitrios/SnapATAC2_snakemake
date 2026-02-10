@@ -1,7 +1,7 @@
 # --- 1. Standard Branch ---
 rule batch_std:
     input:
-        h5ad_input   = get_path("standard", "add_metadata", "h5ad_output")
+        h5ad_input   = get_path("standard","sample_qc_filter","h5ad_output")
     params:
         batch_var = config['analysis_params']['batch']['batch_var'],
         blacklist = config['path_to_blacklist'],

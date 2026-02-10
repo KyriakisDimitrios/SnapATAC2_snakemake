@@ -39,6 +39,45 @@ rule add_metadata:
         > {log} 2>&1
         """
 
+# --- 3. Filter Samples Branch (High Quality) ---
+rule sample_qc_filter:
+    input:
+        # Input 1: The annotated single H5AD from Step 3.2
+        annotated_ds=get_path("standard","add_metadata","h5ad_output"),
+
+        # Input 2: The raw stats text files from Step 1
+        # We use the path defined in 'structure' -> 'tile_qc' -> 'raw_qc'
+        raw_stats=expand(
+            get_path("standard","tile_qc","raw_qc"),
+            sample=config['samples']
+        )
+    params:
+        # Use the parameter from your config
+        min_tsse=config['analysis_params']['sample_qc_filter']['min_mean_tsse']
+    output:
+        # Output: Single H5AD file (Merged_WM_RS.h5ad)
+        filtered_dir = directory(get_path("standard","sample_qc_filter","out_dir")),
+        filtered_ds=get_path("standard","sample_qc_filter","h5ad_output")
+    log:
+        get_path("standard","sample_qc_filter","log")
+    conda: '../envs/magic_env.yaml'
+    shell:
+        """
+        python scripts/3.3.Filter_Samples.py \
+        {input.annotated_ds} \
+        {output.filtered_dir} \
+        {params.min_tsse} \
+        {input.raw_stats} \
+        > {log} 2>&1
+        """
+
+
+
+
+
+
+
+
 
 # --- 2. Metadata Branch ---
 rule merge_meta:

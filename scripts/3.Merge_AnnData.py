@@ -59,6 +59,12 @@ try:
         adatas=filtered_adatas,
         filename=AnnDataSet_path
     )
+    # Add TSS/etc enrichment
+    dat.obs['n_fragment'] = dat.adatas.obs['n_fragment']
+    dat.obs['frac_dup'] = dat.adatas.obs['frac_dup']
+    dat.obs['frac_mito'] = dat.adatas.obs['frac_mito']
+    dat.obs['tsse'] = dat.adatas.obs['tsse']
+    logging.info('Completed: Add TSS enrichment/n_fragment')
 
     logging.info(f'Number of cells: {dat.n_obs}')
     logging.info(f'Number of unique barcodes: {np.unique(dat.obs_names).size}')

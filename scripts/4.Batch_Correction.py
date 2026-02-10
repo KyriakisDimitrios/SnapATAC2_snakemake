@@ -53,16 +53,9 @@ logging.info(f"Leiden AFT PNG: {png_aft_leiden}")
 logging.info(f"Flag output: {flag_output}")
 logging.info(f"H5AD output: {h5ad_output}")
 
-
-
+# --- 1. Load Raw Data ---
 dat = snap.read_dataset(h5ad_input)
-# 2. Convert to a single AnnData object (Loads into RAM)
-adata = dat.to_adata()
-dat.close()
-# 3. Write to a single .h5ad file
-adata.write(h5ad_output)
 
-dat = snap.read_dataset(h5ad_output)
 
 # select features
 logging.info("Selecting features...")
@@ -102,34 +95,61 @@ snap.pp.mnc_correct(dat,
                     n_iter=n_iter,
                     use_rep='X_spectral',
                     use_dims=None,
-                    key_added="X_spectral_mnc_sample_region",
+                    key_added="X_spectral_mnc",
                     inplace=True)
 
-logging.info("Running UMAP (post-correction)...")
+logging.info("Running harmony batch correction by sample...")
+snap.pp.harmony(dat,
+                batch=batch_var,
+                use_rep='X_spectral',
+                max_iter_harmony=20)
+
+logging.info("Running UMAP on mnc_correct (post-correction)...")
 snap.tl.umap(dat, n_comps=2, use_dims=None,
-             use_rep="X_spectral_mnc_sample_region",
-             key_added="umap_mnc_sample_region",
+             use_rep="X_spectral_mnc",
+             key_added="umap_mnc",
+             random_state=0, inplace=True)
+
+logging.info("Running UMAP on Harmonized_correct (post-correction)...")
+snap.tl.umap(dat, n_comps=2, use_dims=None,
+             use_rep="X_spectral_harmony",
+             key_added="umap_harmony",
              random_state=0, inplace=True)
 
 snap.pl.umap(dat,
              color="sample",
-             use_rep="X_umap_mnc_sample_region",
+             use_rep="X_umap_mnc",
              out_file=png_aft_sample)
 
-logging.info("Computing KNN graph and Leiden clustering...")
+logging.info("Computing KNN graph and Leiden clustering on MNC...")
 snap.pp.knn(dat,
             n_neighbors=50,
             use_dims=None,
-            use_rep='X_spectral_mnc_sample_region',
+            use_rep='X_spectral_mnc',
             method='kdtree',
             inplace=True,
             random_state=0)
+snap.tl.leiden(dat,key_added='leiden_mnc')
 
-snap.tl.leiden(dat)
+
+logging.info("Computing KNN graph and Leiden clustering on Harmony...")
+snap.pp.knn(dat,
+            n_neighbors=50,
+            use_dims=None,
+            use_rep='X_spectral_harmony',
+            method='kdtree',
+            inplace=True,
+            random_state=0)
+snap.tl.leiden(dat,key_added='leiden_harmony')
+
+
 
 logging.info("Saving post-correction Leiden UMAP...")
-snap.pl.umap(dat, color='leiden', use_rep="X_umap_mnc_sample_region", out_file=png_aft_leiden)
+snap.pl.umap(dat, color='leiden_mnc', use_rep="X_umap_mnc", out_file=png_mnc_leiden)
+snap.pl.umap(dat, color='leiden_harmony', use_rep="X_umap_harmony", out_file=png_harmony_leiden)
 
+check = dat.to_adata()
+check.write(h5ad_output)
 dat.close()
 
 with open(flag_output, 'w') as f:

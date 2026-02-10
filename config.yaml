@@ -1,6 +1,5 @@
 # ==============================================================================
-# PUBLIC CONFIGURATION: Pipeline Logic & Parameters
-# Safe for Version Control
+# CONFIGURATION: Pipeline Logic & Parameters
 # ==============================================================================
 
 # --- Import Data (Relative Paths) ---
@@ -19,15 +18,21 @@ structure:
         log: "Logs/02.subset_{sample}.log"
     tile_qc:
         dir: "01.tiled/"
-        h5ad_out: "01.tiled/{sample}_Tiled.h5ad"
+        h5ad_out: "01.tiled/{sample}.h5ad"
+        raw_qc: "01.tiled/{sample}_raw_qc.txt"
         log: "Logs/01.tiled_{sample}.log"
     feature_qc:
         dir: "02.feature_qc/"
+        h5ad_out: "02.feature_qc/{sample}.h5ad"
         log: "Logs/02.feature_{sample}.log"
     subset_DGsub:
         dir: "02.subset_DGsub/"
-        h5ad_out: "02.subset_DGsub/{sample}_subsetDG.h5ad"
-        log: "Logs/02.subset_DGsub_{sample}_subsetDG.log"
+        h5ad_out: "02.subset_DGsub/{sample}.h5ad"
+        log: "Logs/02.subset_DGsub_{sample}.log"
+    subset_byRNA:
+        dir: "02.subset_byRNA/"
+        h5ad_out: "02.subset_byRNA/{sample}.h5ad"
+        log: "Logs/02.subset_byRNA_{sample}.log"
     merge:
         dir: "03.1.merged/"
         AnnDataSet: "03.1.merged/AnnData_Merged.h5ads"
@@ -37,9 +42,14 @@ structure:
         dir: "03.2.add_metadata/"
         h5ad_output: "03.2.add_metadata/Merged_WithMetadata.h5ad"
         log: "Logs/03.2.add_metadata.log"
+    sample_qc_filter:
+        dir: "03.3.sample_qc_filter/"
+        out_dir: "03.3.sample_qc_filter/Filtered"
+        h5ad_output: "03.3.sample_qc_filter/Filtered/_dataset.h5ads" # WM = with metadata RS = remove samples
+        log: "Logs/03.3.sample_qc_filter.log"
     batch:
         dir: "04.batch_correction/"
-        batch_var: 'donor'
+        batch_var: 'sample'
         h5ad_output: "04.batch_correction/Merged_WithMetadata_Batch.h5ad"
         flag: "flags/batch.done"
         log: "Logs/04.batch_correction.log"
@@ -66,18 +76,17 @@ branches:
             group_by: "leiden"  # <--- NEW: Define grouping (usually clusters)
 
     # --- Branch B: Metadata ---
-    metadata:
-        root: "metadata/"
+    Subset_byRNA:
+        root: "Subset_byRNA/"
         constrain:
-            dir: "metadata/01.constrained/"
+            dir: "Subset_byRNA/01.constrained/"
         peaks:
-            group_by: "leiden"  # <--- NEW: Define grouping
+            group_by: "subtype_v1"  # <--- NEW: Define grouping
 
     # --- Branch C: DG Subset ---
     DG_Subset:
         root: "DG_Subset/"
         subset:
-            output_file:
             group_by: "subtype_v1"
             target_subtypes: ['RGL', 'IPC', 'ImGC', 'IntGC', 'mGC']
             log: "Logs/Subsetting/DG_Subset_{sample}.log"
@@ -87,13 +96,14 @@ branches:
 # --- Analysis Parameters ---
 analysis_params:
     tile_qc:
-        h5ad_out: "01.tiled/{sample}_Tiled.h5ad"
         bin_size: 5000
         min_tsse: 7
     feature_qc:
         filter_lower_quantile: 0.005
         filter_upper_quantile: 0.005
         n_features: 200000
+    sample_qc_filter:
+        min_mean_tsse: 7
     batch:
         batch_var: 'sample'
         n_features: 500000

@@ -21,6 +21,7 @@ try:
     min_tsse = int(sys.argv[3])
     bin_size = int(sys.argv[4])
     output_file = sys.argv[5]
+    output_qc_stats = sys.argv[6]
 except IndexError:
     logging.error("Not enough arguments provided.")
     sys.exit(1)
@@ -38,6 +39,16 @@ adata.close()
 # Compute TSS enrichment
 snap.metrics.tsse(adata_copy, annotation_gff3_file)
 logging.info('Completed: Compute TSS enrichment')
+
+# 2. CAPTURE RAW METRIC (Before Filtering)
+raw_mean_tsse = adata_copy.obs['tsse'].mean()
+raw_cell_count = adata_copy.n_obs
+
+logging.info(f"Raw Mean TSSE: {raw_mean_tsse:.4f}")
+
+# Save simple text file: "SCORE,CELL_COUNT"
+with open(output_qc_stats, 'w') as f:
+    f.write(f"{raw_mean_tsse},{raw_cell_count}")
 
 # Filter based on TSS
 snap.pp.filter_cells(adata_copy, min_tsse=min_tsse)
