@@ -1,4 +1,4 @@
-name: snapatac2_env
+name: snapatac_annotation
 channels:
   - conda-forge
   - bioconda
@@ -19,7 +19,8 @@ dependencies:
 #  - chromium
   - pip:
       - plotly>=5.0
+      - magic-impute       # Provides 'import magic'
+      - harmonypy
       - kaleido==0.2.1
       - chromium
-      - magic-impute
 
