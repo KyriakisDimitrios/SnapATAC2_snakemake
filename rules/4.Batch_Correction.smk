@@ -90,7 +90,7 @@ rule batch_std:
         h5ad_output=get_path("standard","batch","h5ad_output")
     log:
         get_path("standard","batch","log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         """
         python scripts/4.Batch_Correction.py \

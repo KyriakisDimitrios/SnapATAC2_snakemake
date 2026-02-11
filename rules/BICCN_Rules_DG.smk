@@ -38,7 +38,7 @@ rule merge_DG:
     output:
         AnnDataSet = get_path(branch_to_run,"merge","AnnDataSet"),
     log: get_path(branch_to_run, "merge", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         "python scripts/3.Merge_AnnData.py {input.metadata_path} {output.AnnDataSet}  {input.adatas}  > {log} 2>&1"
 
@@ -46,7 +46,7 @@ rule merge_DG:
 # --- 1. Standard Branch ---
 rule batch_DG:
     input:
-        h5ad_input   =  get_path("DG_Subset","merge","AnnDataSet")
+        h5ad_input   =  get_path(branch_to_run,"merge","AnnDataSet")
     params:
         batch_var=config['analysis_params']['batch']['batch_var'],
         blacklist=config['path_to_blacklist'],
@@ -143,7 +143,7 @@ rule cluster_DG:
 # --- 1. Standard Branch ---
 rule gem_DG:
     input:
-        h5ad_input = get_path(branch_to_run, "clustering", "h5ad")
+        h5ad_input = get_path(branch_to_run,"batch","h5ad_output")#get_path(branch_to_run, "clustering", "h5ad")
     params:
         work_dir      = config["projdir"],
         genome_annot  = config["genome_annot"],
@@ -198,7 +198,7 @@ rule gem_DG:
 rule create_peaks_DG:
     input:
         # Input is the Clustered Object (contains fragments & metadata)
-        h5ad = get_path(branch_to_run, "clustering", "h5ad")
+        h5ad = get_path(branch_to_run, "batch", "h5ad_output")
     params:
         # Path to the work directory (for MACS3 temp files)
         work_dir = get_path(branch_to_run, "peaks", "work_dir"),

@@ -29,24 +29,58 @@ rule merge_CTbyRNA:
 # --- 1. Standard Branch ---
 rule batch_CTbyRNA:
     input:
-        h5ad_input   = get_path(branch_to_run, "merge", "AnnDataSet")
+        h5ad_input = get_path(branch_to_run,"merge","AnnDataSet")
     params:
-        batch_var = config['analysis_params']['batch']['batch_var'],
-        blacklist = config['path_to_blacklist'],
-        n_feat    = config['analysis_params']['batch']['n_features'],
-        max_iter  = config['analysis_params']['batch']['max_iter'],
-        n_iter    = config['analysis_params']['batch']['n_iter'],
-        # Eigen Plot (Param because it is an output of the script but not a rule output used downstream)
-        png_eigen = report(get_path(branch_to_run, "batch", "dir") + "eigen.png", category="Standard", subcategory="Batch")
+        batch_var=config['analysis_params']['batch']['batch_var'],
+        blacklist=config['path_to_blacklist'],
+        n_feat=config['analysis_params']['batch']['n_features'],
+        max_iter=config['analysis_params']['batch']['max_iter'],
+        n_iter=config['analysis_params']['batch']['n_iter'],
+
+        # --- 1. Diagnostics ---
+        png_eigen=report(
+            get_path(branch_to_run,"batch","dir") + "eigen.png",
+            category="Batch Correction",
+            subcategory="Diagnostics"
+        ),
+
+        # --- 2. Pre-Correction ---
+        png_pre=report(
+            get_path(branch_to_run,"batch","dir") + "umap_pre_sample.png",
+            category="Batch Correction",
+            subcategory="Pre-Correction"
+        ),
+
+        # --- 3. MNC Method ---
+        png_mnc_s=report(
+            get_path(branch_to_run,"batch","dir") + "umap_mnc_sample.png",
+            category="Batch Correction",
+            subcategory="MNC"
+        ),
+        png_mnc_l=report(
+            get_path(branch_to_run,"batch","dir") + "umap_mnc_leiden.png",
+            category="Batch Correction",
+            subcategory="MNC"
+        ),
+
+        # --- 4. Harmony Method ---
+        png_harm_s=report(
+            get_path(branch_to_run,"batch","dir") + "umap_harmony_sample.png",
+            category="Batch Correction",
+            subcategory="Harmony"
+        ),
+        png_harm_l=report(
+            get_path(branch_to_run,"batch","dir") + "umap_harmony_leiden.png",
+            category="Batch Correction",
+            subcategory="Harmony"
+        )
+
     output:
-        h5ad_output = get_path(branch_to_run,"batch","h5ad_output"),
-        flag_out = get_path(branch_to_run, "batch", "flag"),
-        png1     = report(get_path(branch_to_run, "batch", "dir") + "umap_sample.png", category="Standard", subcategory="Batch"),
-        png2     = report(get_path(branch_to_run, "batch", "dir") + "umap_aft_sample.png", category="Standard", subcategory="Batch"),
-        png3     = report(get_path(branch_to_run, "batch", "dir") + "umap_aft_leiden.png", category="Standard", subcategory="Batch")
+        flag_out=get_path(branch_to_run,"batch","flag"),
+        h5ad_output=get_path(branch_to_run,"batch","h5ad_output")
     log:
-        get_path(branch_to_run, "batch", "log")
-    conda: '../envs/scanpy_env.yaml' # Assuming magic_env contains snapatac2/scanpy
+        get_path(branch_to_run,"batch","log")
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         """
         python scripts/4.Batch_Correction.py \
@@ -57,14 +91,15 @@ rule batch_CTbyRNA:
         {params.max_iter} \
         {params.n_iter} \
         {params.png_eigen} \
-        {output.png1} \
-        {output.png2} \
-        {output.png3} \
+        {params.png_pre} \
+        {params.png_mnc_s} \
+        {params.png_mnc_l} \
+        {params.png_harm_s} \
+        {params.png_harm_l} \
         {output.flag_out} \
         {output.h5ad_output} \
         > {log} 2>&1
         """
-
 
 # --- 3. DG Subset Branch ---
 rule cluster_CTbyRNA:
@@ -91,7 +126,7 @@ rule cluster_CTbyRNA:
 # --- 1. Standard Branch ---
 rule gem_CTbyRNA:
     input:
-        h5ad_input = get_path(branch_to_run, "clustering", "h5ad")
+        h5ad_input = get_path(branch_to_run,"batch","h5ad_output")
     params:
         work_dir      = config["projdir"],
         genome_annot  = config["genome_annot"],
@@ -146,7 +181,7 @@ rule gem_CTbyRNA:
 rule create_peaks_CTbyRNA:
     input:
         # Input is the Clustered Object (contains fragments & metadata)
-        h5ad = get_path(branch_to_run, "clustering", "h5ad")
+        h5ad = get_path(branch_to_run,"batch","h5ad_output")
     params:
         # Path to the work directory (for MACS3 temp files)
         work_dir = get_path(branch_to_run, "peaks", "work_dir"),

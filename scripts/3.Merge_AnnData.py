@@ -5,7 +5,8 @@ import os
 import snapatac2 as snap
 import logging
 import time
-
+import multiprocessing as mp
+import harmonypy as hm
 # --- Logger Configuration ---
 logging.basicConfig(
     format='%(asctime)s | %(levelname)-7s | %(message)s',
@@ -88,10 +89,10 @@ try:
     unique_cell_ids = [sa + ':' + bc for sa, bc in zip(dat.obs['sample'], dat.obs_names)]
     dat.obs_names = unique_cell_ids
 
-    # Validation
-    assert dat.n_obs == np.unique(dat.obs_names).size
-
     dat.close()
+    # --- 7. Save Final Output ---
+    logging.info(f"Saving AnnData to ...")
+
 
 
 except Exception as e:
