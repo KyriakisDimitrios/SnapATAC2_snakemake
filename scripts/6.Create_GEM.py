@@ -67,18 +67,19 @@ try:
     logging.info('Started: make_gene_matrix')
 
     # Load in memory (backed=None) as gene matrix creation requires full access
-    data = snap.read(h5ad_input, backed=None)
+    data = snap.read_dataset(h5ad_input)
 
     # Generate Gene Matrix
     adata = snap.pp.make_gene_matrix(data, genome_annot)
 
     # Carry over UMAP from integration step
-    if "X_umap_mnc_sample_region" in data.obsm:
-        adata.obsm["X_umap_mnc_sample_region"] = data.obsm["X_umap_mnc_sample_region"]
+    if "X_umap_mnc" in data.obsm:
+        adata.obsm["X_umap_mnc"] = data.obsm["X_umap_mnc"]
+    if "X_umap_harmony" in data.obsm:
+        adata.obsm["X_umap_harmony"] = data.obsm["X_umap_harmony"]
     if "X_umap" in data.obsm:
         adata.obsm["X_umap"] = data.obsm["X_umap"]
-    else:
-        logging.warning("X_umap_mnc_sample_region not found in input data.")
+    data.close()
 
     # Modular Filtering
     if 'python_utils' in sys.modules:

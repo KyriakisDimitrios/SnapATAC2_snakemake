@@ -20,7 +20,7 @@ dependencies:
   - pip:
       - plotly>=5.0
       - magic-impute       # Provides 'import magic'
-      - harmonypy
+      - harmonypy==0.0.10
       - kaleido==0.2.1
       - chromium
 

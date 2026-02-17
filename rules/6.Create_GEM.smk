@@ -1,7 +1,7 @@
 # --- 1. Standard Branch ---
 rule gem_std:
     input:
-        h5ad_input = get_path("standard", "clustering", "h5ad")
+        h5ad_input = get_path("standard","batch","h5ad_output") #get_path("standard", "clustering", "h5ad")
     params:
         work_dir      = config["projdir"],
         genome_annot  = config["genome_annot"],

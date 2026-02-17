@@ -1,121 +1,88 @@
-import numpy as np
-import pandas as pd
 import sys
 import os
-import snapatac2 as snap
 import logging
-import time
+import pandas as pd
 import scanpy as sc
-# --- Logger Configuration ---
-logging.basicConfig(
-    format='%(asctime)s | %(levelname)-7s | %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    level=logging.INFO,
-    handlers=[logging.StreamHandler(sys.stderr)]
-)
 
-start_time = time.time()
-logging.info("Started: Add Metadata")
+# --- 1. Setup ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(message)s')
 
-# --- Inputs from Snakemake ---
-try:
-    h5ad_input = sys.argv[1]
-    rush_meta   = sys.argv[2]
-    va_meta = sys.argv[3]
-    h5ad_output = sys.argv[4]
-except ValueError:
-    logging.error("Not enough arguments provided.")
-    sys.exit(1)
+# Get arguments from command line
+input_h5ad  = sys.argv[1]
+rush_meta_path = sys.argv[2]
+va_meta_path   = sys.argv[3]
+output_h5ad = sys.argv[4]
 
-logging.info(f"H5ad input destination: {h5ad_input}")
-logging.info(f"Metadata Rush file: {rush_meta}")
-logging.info(f"Metadata VA file: {va_meta}")
-logging.info(f"H5ad output file: {h5ad_output}")
+logging.info(f"Processing: {os.path.basename(input_h5ad)}")
 
-# Load Rush
-meta_rush = pd.read_csv(rush_meta, sep="\t")
-meta_rush['BB'] = meta_rush['BB'].astype(str).str.strip()  # Remove whitespace
-cleaned_names = meta_rush['sample_name'].astype(str).str.replace(r'^[^_]+_', '', regex=True)
-meta_rush['TestID'] = meta_rush['BB'] + "_" + cleaned_names
-# Fix: Ensure Rush IDs are clean (remove spaces like 'Rush _124')
-meta_rush['TestID'] = meta_rush['TestID'].str.replace(' ', '')
+# --- 2. Load the Data ---
+logging.info("Loading AnnData...")
+adata = sc.read_h5ad(input_h5ad)
 
-# Load VA
-meta_va = pd.read_csv(va_meta, sep="\t")
-meta_va['TestID'] = meta_va['sample_name'].astype(str).str.replace('_', '-', regex=False)
+# --- 3. Prepare the Metadata (The Lookup Table) ---
+logging.info("Loading Metadata...")
 
-# Combine
-combined_meta = pd.concat([meta_va, meta_rush], ignore_index=True)
-combined_meta = combined_meta.drop_duplicates(subset=['TestID'])
-meta_lookup = combined_meta.set_index('TestID')
+# A. Load Rush Metadata
+df_rush = pd.read_csv(rush_meta_path, sep="\t")
+# Create 'TestID' = "Rush_054" (Clean up spaces and names)
+df_rush['clean_name'] = df_rush['sample_name'].astype(str).str.replace(r'^[^_]+_', '', regex=True)
+df_rush['TestID'] = df_rush['BB'].astype(str).str.strip() + "_" + df_rush['clean_name']
+df_rush['TestID'] = df_rush['TestID'].str.replace(' ', '') # Remove spaces
 
-logging.info(f"Total metadata rows: {len(meta_lookup)}")
-logging.info(f"Sample Check - Rush: 'Rush_054' in metadata? {'Rush_054' in meta_lookup.index}")
+# B. Load VA Metadata
+df_va = pd.read_csv(va_meta_path, sep="\t")
+# Create 'TestID' = "VA-2302" (Standardize format)
+df_va['TestID'] = df_va['sample_name'].astype(str).str.replace('_', '-', regex=False)
 
+# C. Combine them
+lookup_table = pd.concat([df_va, df_rush], ignore_index=True)
+# Remove duplicates just in case
+lookup_table = lookup_table.drop_duplicates(subset=['TestID'])
+# Set the index so we can look things up easily
+lookup_table = lookup_table.set_index('TestID')
 
-# ====================== 3. Logic Function ======================
-def get_metadata_row(donor_id, meta_lookup):
-    """
-    Smart lookup:
-    1. Exact Match
-    2. Swap Separator (Rush-54 -> Rush_54)
-    3. Zero Pad (Rush_54 -> Rush_054)
-    """
-    # 1. Exact
-    if donor_id in meta_lookup.index:
-        return meta_lookup.loc[donor_id]
+logging.info(f"Metadata loaded. Found {len(lookup_table)} samples in the table.")
 
-    # 2. Separator Swap
-    alt_id = donor_id.replace('-', '_')
-    if alt_id in meta_lookup.index:
-        return meta_lookup.loc[alt_id]
+# --- 4. Map Data to Cells ---
+logging.info("Mapping metadata to cells...")
 
-    # 3. Zero Pad (Specific for Rush)
-    if "Rush" in alt_id:
-        try:
-            parts = alt_id.split('_')
-            # If we have [Rush, 54], pad the number
-            if len(parts) == 2 and parts[1].isdigit():
-                padded_id = f"{parts[0]}_{int(parts[1]):03d}"
-                if padded_id in meta_lookup.index:
-                    logging.info(f"   (Logic Applied: {donor_id} -> {padded_id})")
-                    return meta_lookup.loc[padded_id]
-        except:
-            pass
-    return None
+# We create a new column 'clean_sample_id' in adata to match the format of our table
+# e.g., "Rush-54_multi" -> "Rush_054"
 
+# Step A: Get raw sample names from the adata
+# We make a copy to work on
+adata.obs['donor'] = adata.obs['sample'].astype(str)
+adata.obs['clean_sample_id'] = adata.obs['sample'].astype(str)
 
-# ====================== 4. Test on File (SnapATAC2) ======================
-logging.info(f"\n--- Processing {os.path.basename(h5ad_input)} ---")
+# Step B: Fix formatting to match the Lookup Table
+# 1. Remove '_multi'
+adata.obs['clean_sample_id'] = adata.obs['clean_sample_id'].str.replace(r'_multi$', '', regex=True)
+# 2. Fix Rush IDs (Rush-54 -> Rush_054)
+#    We split by '-', take the number, pad it with zeros, and put it back together
+#    Note: This specific line handles the "Rush-54" to "Rush_054" conversion
+def fix_rush_id(x):
+    if "Rush" in x and "-" in x:
+        parts = x.split("-")
+        if len(parts) == 2 and parts[1].isdigit():
+            return f"Rush_{int(parts[1]):03d}"
+    return x.replace("-", "_") if "Rush" in x else x
 
-# Open in backed mode ('r+') to allow writing metadata without loading matrix
-adata = sc.read_h5ad(h5ad_input)
+adata.obs['clean_sample_id'] = adata.obs['clean_sample_id'].apply(fix_rush_id)
 
-# A. Create Donor Column
-if 'sample' in adata.obs.columns:
-    # Remove _multi suffix
-    adata.obs['donor'] = adata.obs['sample'].astype(str).str.replace(r'_multi$', '', regex=True)
-    current_donor = str(adata.obs['donor'].iloc[0])
-    logging.info(f"File Donor ID: {current_donor}")
+# Step C: The Merge (This is the magic part)
+# We find the intersection of sample IDs
+valid_ids = adata.obs['clean_sample_id'].unique()
+logging.info(f"Found {len(valid_ids)} unique samples in the data.")
 
-    # B. Find Match
-    row = get_metadata_row(current_donor, meta_lookup)
+# Create a dictionary for every column in the metadata
+# e.g. map_dict = {'Rush_054': 'Male', 'VA-2302': 'Female'}
+for col in lookup_table.columns:
+    # Create the map
+    map_dict = lookup_table[col].to_dict()
+    # Apply it to the cells
+    adata.obs[col] = adata.obs['clean_sample_id'].map(map_dict)
 
-    if row is not None:
-        logging.info(f"MATCH FOUND: Linked to {row.name}")
-
-        # C. Write Metadata
-        for col in row.index:
-            adata.obs[col] = row[col]
-        logging.info("Metadata successfully written to adata.obs")
-    else:
-        logging.info("!! FAILURE: No match found in metadata !!")
-else:
-    logging.info("Error: 'sample' column missing")
-
-adata.write(h5ad_output)
-
-end_time = time.time()
-duration = end_time - start_time
-logging.info(f"Completed: Add Metadata")
-logging.info(f"Total running time: {duration:.2f} seconds")
+# --- 5. Save ---
+logging.info(f"Saving to {output_h5ad}...")
+adata.write(output_h5ad, compression="gzip")
+logging.info("Done.")
