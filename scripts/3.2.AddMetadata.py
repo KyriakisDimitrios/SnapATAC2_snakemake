@@ -83,6 +83,17 @@ for col in lookup_table.columns:
     adata.obs[col] = adata.obs['clean_sample_id'].map(map_dict)
 
 # --- 5. Save ---
+logging.info("Sanitizing metadata columns...")
+for col in adata.obs.columns:
+    # Force convert all object columns to string to handle NaNs/Integers mixed in
+    if adata.obs[col].dtype == 'object':
+        adata.obs[col] = adata.obs[col].astype(str)
 logging.info(f"Saving to {output_h5ad}...")
+
+# Ensure the folder exists
+output_dir = os.path.dirname(output_h5ad)
+if output_dir:
+    os.makedirs(output_dir, exist_ok=True)
+
 adata.write(output_h5ad, compression="gzip")
 logging.info("Done.")
