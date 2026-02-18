@@ -43,8 +43,8 @@ rule add_metadata:
 rule sample_qc_filter:
     input:
         # Input 1: The annotated single H5AD from Step 3.2
-        #annotated_ds=get_path("standard", "merge", "AnnDataSet"),#
-        annotated_ds=get_path("standard","add_metadata","h5ad_output"),
+        annotated_ds=get_path("standard", "merge", "AnnDataSet"),#
+        #annotated_ds=get_path("standard","add_metadata","h5ad_output"),
 
         # Input 2: The raw stats text files from Step 1
         # We use the path defined in 'structure' -> 'tile_qc' -> 'raw_qc'

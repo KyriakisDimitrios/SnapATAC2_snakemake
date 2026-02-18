@@ -349,3 +349,82 @@ def prep_int(adata):
 
     logging.info("Unique indices created and raw counts saved to layers['counts'].")
     return adata
+
+
+
+
+
+def get_mads(adata, column, mads=[4, 5], use_log10=False):
+    """Calculates MAD-based thresholds on raw or log10 data."""
+    try:
+        data = pd.to_numeric(adata.obs[column], errors='coerce')
+        # Filter out zeros/negatives for log transformation
+        if use_log10:
+            data = data[data > 0]
+            data = np.log10(data)
+
+        median_val = np.median(data)
+        mad_val = np.median(np.abs(data - median_val))
+
+        thresholds = {'median': median_val, 'mad': mad_val, 'is_log10': use_log10}
+
+        for n in mads:
+            thresholds[f'{n}_mad_upper'] = median_val + (n * mad_val)
+            thresholds[f'{n}_mad_lower'] = median_val - (n * mad_val)
+
+        return thresholds
+    except Exception as e:
+        logging.error(f"Error calculating MADs: {e}")
+        return None
+
+
+def save_qc_plot(adata, column, stats, use_log10, save_path, filename, plot_lower=False):
+    """Generates and saves a histogram with optional lower threshold plotting."""
+    try:
+        data = pd.to_numeric(adata.obs[column], errors='coerce')
+
+        if use_log10:
+            data = data[data > 0]
+            data = np.log10(data)
+            label_suffix = " (log10)"
+        else:
+            label_suffix = ""
+
+        plt.figure(figsize=(10, 6))
+        plt.hist(data, bins=100, color='lightsteelblue', edgecolor='white', alpha=0.8)
+
+        colors = ['red', 'darkred', 'orange', 'black']
+        styles = ['--', '-.', ':', '-']
+
+        # Get sorted MAD levels from the keys
+        mad_levels = sorted(list(set([int(k.split('_')[0]) for k in stats.keys() if '_mad' in k])))
+
+        for i, n in enumerate(mad_levels):
+            # Upper threshold
+            upper_val = stats[f'{n}_mad_upper']
+            plt.axvline(upper_val, color=colors[i % len(colors)], linestyle=styles[i % len(styles)],
+                        label=f'{n} MAD Upper ({upper_val:.2f})')
+
+            # Lower threshold (only if requested)
+            if plot_lower:
+                lower_val = stats[f'{n}_mad_lower']
+                # Use a dotted style for lower to distinguish it from upper
+                plt.axvline(lower_val, color=colors[i % len(colors)], linestyle=':',
+                            label=f'{n} MAD Lower ({lower_val:.2f})')
+
+        plt.title(f"QC Distribution: {column}{label_suffix}", fontsize=14)
+        plt.xlabel(f"{column}{label_suffix}", fontsize=12)
+        plt.ylabel("Cell Count", fontsize=12)
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')  # Move legend outside if it gets too crowded
+        plt.grid(axis='y', alpha=0.3)
+        plt.tight_layout()
+
+        os.makedirs(save_path, exist_ok=True)
+        full_path = os.path.join(save_path, filename)
+        plt.savefig(full_path, dpi=300)
+        plt.close()
+        logging.info(f"Plot successfully saved to: {full_path}")
+
+    except Exception as e:
+        logging.error(f"Error saving plot: {e}")
+

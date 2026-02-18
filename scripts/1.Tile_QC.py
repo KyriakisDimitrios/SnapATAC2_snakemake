@@ -1,7 +1,23 @@
+import os
 import sys
 import logging
 import time
+import scanpy as sc
 import snapatac2 as snap
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+from python_utils import get_mads
+
+import warnings
+# Suppress Deprecation warnings from background libraries
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+# Suppress the "Divide by Zero" warning when doing log10
+warnings.filterwarnings("ignore", message="divide by zero encountered in log10")
+
+
 
 # --- Logger Configuration ---
 logging.basicConfig(
@@ -18,10 +34,11 @@ start_time = time.time()
 try:
     adata_file = sys.argv[1]
     annotation_gff3_file = sys.argv[2]
-    min_tsse = int(sys.argv[3])
-    bin_size = int(sys.argv[4])
-    output_file = sys.argv[5]
-    output_qc_stats = sys.argv[6]
+    path_to_blacklist = sys.argv[3]
+    min_tsse = int(sys.argv[4])
+    bin_size = int(sys.argv[5])
+    output_file = sys.argv[6]
+    output_qc_stats = sys.argv[7]
 except IndexError:
     logging.error("Not enough arguments provided.")
     sys.exit(1)
@@ -35,6 +52,10 @@ logging.info(f"Output file: {output_file}")
 adata = snap.read(adata_file, backed='r', backend='hdf5')
 adata_copy = adata.copy(filename=output_file, backend=None)
 adata.close()
+
+
+logging.info(f"Starting Filtering. Original cells: {adata_copy.n_obs}")
+snap.metrics.frip(adata_copy, {"blacklist_frac": path_to_blacklist},inplace=True)
 
 # Compute TSS enrichment
 snap.metrics.tsse(adata_copy, annotation_gff3_file)
@@ -50,7 +71,44 @@ logging.info(f"Raw Mean TSSE: {raw_mean_tsse:.4f}")
 with open(output_qc_stats, 'w') as f:
     f.write(f"{raw_mean_tsse},{raw_cell_count}")
 
-# Filter based on TSS
+
+# 1. Get the filename: 'Rush-01_Tiled.h5ad'
+base = os.path.basename(output_file)
+# 2. Split by the underscore and take the first part: 'Rush-01'
+sample_name = base.split('_')[0]
+
+# Extract the directory path
+directory_path = os.path.dirname(output_file)
+
+# 1. Process TSSE (Raw scale)
+tsse_stats = get_mads(adata=adata_copy,
+         column='tsse',
+         mads=[2, 3],
+         use_log10=True)
+save_qc_plot(adata=adata_copy,
+             column='tsse',
+             stats=tsse_stats,
+             use_log10=True,
+             save_path=directory_path+"/figures/qc",
+             filename=sample_name+"_tsse_raw.png",
+             plot_lower=True)
+
+# 2. Process Fragments (Log10 scale)
+frag_stats = get_mads(adata=adata_copy,
+         column='n_fragment',
+         mads=[4, 5],
+         use_log10=True)
+save_qc_plot(adata=adata_copy,
+             column='n_fragment',
+             stats=frag_stats,
+             use_log10=True,
+             save_path="./figures/qc",
+             filename=sample_name+"_frag_log10.png",
+             plot_lower=True)
+
+
+
+
 snap.pp.filter_cells(adata_copy, min_tsse=min_tsse)
 logging.info('Completed: Filter based on TSS')
 

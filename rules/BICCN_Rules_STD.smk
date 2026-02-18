@@ -38,7 +38,8 @@ rule tile_qc_std:
     input:
         # FIX: Must match rule import_data output exactly
         adatas = os.path.join(config['results_dir_path'], config['import_data']['h5ads_output_dir'], "{sample}.h5ad"),
-        annotation_gff3_file = config['genome_annot']
+        annotation_gff3_file = config['genome_annot'],
+        path_to_blacklist= config['path_to_blacklist']
     params:
         min_tsse=config['analysis_params']['tile_qc']['min_tsse'],
         bin_size=config['analysis_params']['tile_qc']['bin_size']
@@ -53,6 +54,7 @@ rule tile_qc_std:
         python scripts/1.Tile_QC.py \
         {input.adatas} \
         {input.annotation_gff3_file} \
+        {input.path_to_blacklist} \
         {params.min_tsse} \
         {params.bin_size} \
         {output.tiled} \
