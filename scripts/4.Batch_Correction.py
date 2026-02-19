@@ -101,7 +101,7 @@ logging.info("Clustering Harmony...")
 snap.pp.knn(dat, n_neighbors=50,
             use_rep='X_spectral_harmony',
             method='kdtree', inplace=True, random_state=random_state)
-snap.tl.leiden(dat, key_added='leiden_harmony')
+snap.tl.leiden(dat, key_added='leiden_harmony',resolution=2)
 
 
 # Plot 5 & 6: Harmony Sample + Harmony Leiden
@@ -130,7 +130,7 @@ snap.tl.umap(dat, n_comps=2,
 # Cluster MNC
 logging.info("Clustering MNC...")
 snap.pp.knn(dat, n_neighbors=50, use_rep='X_spectral_mnc', method='kdtree', inplace=True, random_state=0)
-snap.tl.leiden(dat, key_added='leiden_mnc')
+snap.tl.leiden(dat, key_added='leiden_mnc',resolution=2)
 
 # Plot 3 & 4: MNC Sample + MNC Leiden
 snap.pl.umap(dat, color="sample", use_rep="X_umap_mnc", out_file=png_mnc_s, height=500, width=500, show=False)
