@@ -10,6 +10,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from python_utils import get_mads
+from python_utils import save_qc_plot
 
 import warnings
 # Suppress Deprecation warnings from background libraries
@@ -71,6 +72,7 @@ logging.info(f"Raw Mean TSSE: {raw_mean_tsse:.4f}")
 with open(output_qc_stats, 'w') as f:
     f.write(f"{raw_mean_tsse},{raw_cell_count}")
 
+snap.pp.filter_cells(adata_copy, min_tsse=3)
 
 # 1. Get the filename: 'Rush-01_Tiled.h5ad'
 base = os.path.basename(output_file)
@@ -83,7 +85,7 @@ directory_path = os.path.dirname(output_file)
 # 1. Process TSSE (Raw scale)
 tsse_stats = get_mads(adata=adata_copy,
          column='tsse',
-         mads=[2, 3],
+         mads=[3,4,5],
          use_log10=True)
 save_qc_plot(adata=adata_copy,
              column='tsse',
@@ -96,18 +98,49 @@ save_qc_plot(adata=adata_copy,
 # 2. Process Fragments (Log10 scale)
 frag_stats = get_mads(adata=adata_copy,
          column='n_fragment',
-         mads=[4, 5],
+         mads=[3,4, 5],
          use_log10=True)
 save_qc_plot(adata=adata_copy,
              column='n_fragment',
              stats=frag_stats,
              use_log10=True,
-             save_path="./figures/qc",
+             save_path=directory_path+"/figures/qc",
              filename=sample_name+"_frag_log10.png",
              plot_lower=True)
 
+blacklist_frac_stats = get_mads(adata=adata_copy,
+         column='blacklist_frac',
+         mads=[3,4,5],
+         use_log10=False)
+save_qc_plot(adata=adata_copy,
+             column='blacklist_frac',
+             stats=blacklist_frac_stats,
+             use_log10=False,
+             save_path=directory_path+"/figures/qc",
+             filename=sample_name+"_blacklist_frac.png",
+             plot_lower=False)
+
+tsse_data = pd.to_numeric(adata_copy.obs['tsse'], errors='coerce')
+tsse_data = np.log10(tsse_data)
+adata_copy.obs['log10(tsse)'] = tsse_data
+n_fragment_data = pd.to_numeric(adata_copy.obs['n_fragment'], errors='coerce')
+n_fragment_data = np.log10(n_fragment_data)
+adata_copy.obs['log10(n_fragment)'] = n_fragment_data
 
 
+# Assuming tsse_stats and frag_stats were calculated with use_log10=True
+import logging
+
+# Assuming tsse_stats and frag_stats were calculated with use_log10=True
+mask = (
+    (adata_copy.obs['log10(tsse)'] > tsse_stats['4_mad_lower']) &
+    (adata_copy.obs['log10(tsse)'] < tsse_stats['4_mad_upper']) &
+    (adata_copy.obs['log10(n_fragment)'] < frag_stats['4_mad_upper'])&
+    (adata_copy.obs['blacklist_frac'] < blacklist_frac_stats['5_mad_upper'])
+)
+
+adata_copy.subset(obs_indices=mask)
+logging.info(f"Filtering complete. Remaining cells: {adata_copy.n_obs}")
 
 snap.pp.filter_cells(adata_copy, min_tsse=min_tsse)
 logging.info('Completed: Filter based on TSS')
