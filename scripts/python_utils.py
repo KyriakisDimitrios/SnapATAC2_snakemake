@@ -9,6 +9,7 @@ import sys
 import os
 import scipy.io
 import scanpy.external as sce
+import matplotlib.pyplot as plt
 
 # --- Logger Configuration ---
 # Logs will appear instantly (unbuffered) in your Snakemake log file.
@@ -427,4 +428,180 @@ def save_qc_plot(adata, column, stats, use_log10, save_path, filename, plot_lowe
 
     except Exception as e:
         logging.error(f"Error saving plot: {e}")
+
+
+
+
+import matplotlib.pyplot as plt
+import scanpy as sc
+
+def plot_custom_highlight(adata, color='sample', highlight_group=None, basis='X_umap_mnc', fast=False, show=True):
+    """
+    Plots an embedding highlighting a specific group.
+
+    Args:
+        fast (bool):
+            - True: Uses raw Matplotlib (Fast, less detail).
+            - False: Uses Scanpy for both layers (Slower, perfect visual match).
+        show (bool):
+            - True: Displays the plot immediately and returns None (Prevents double plotting).
+            - False: Returns the 'fig' object (Useful for saving).
+    """
+    # Create the canvas
+    fig, ax = plt.subplots(figsize=(6, 6))
+
+    # Ensure colors exist
+    if f'{color}_colors' not in adata.uns:
+        sc.pl.embedding(adata, basis=basis, color=color, show=False)
+
+    # --- MODE 1: FAST (Raw Matplotlib) ---
+    if fast:
+        x = adata.obsm[basis][:, 0]
+        y = adata.obsm[basis][:, 1]
+        # Plot background as simple grey dots
+        ax.scatter(x, y, c='#eeeeee', s=20, edgecolors='none')
+
+    # --- MODE 2: HIGH DETAIL (Scanpy Native) ---
+    else:
+        # Plot background using Scanpy
+        # We pass color=None (defaults to blue) so we force a grey color using 'palette' or kwargs if needed
+        # But specifically here, passing 'color=None' usually plots default dots.
+        # To strictly force GREY in Scanpy without 'color' data, we rely on the fact
+        # that 'color=None' + 'groups=None' usually plots neutral dots.
+        sc.pl.embedding(
+            adata,
+            basis=basis,
+            color=None,
+            ax=ax,
+            show=False,
+            frameon=False,
+            title="",
+            size=None
+        )
+
+    # --- LAYER 2: The Highlight (The Target Group) ---
+    if highlight_group:
+        # 1. Subset the data
+        subset = adata[adata.obs[color].isin(highlight_group)].copy()
+
+        # 2. Get the specific color for consistency
+        cats = adata.obs[color].cat.categories
+        colors = adata.uns[f'{color}_colors']
+        color_map = dict(zip(cats, colors))
+
+        # 3. Plot ON TOP using Scanpy
+        sc.pl.embedding(
+            subset,
+            basis=basis,
+            color=color,
+            ax=ax,
+            legend_loc='on data',
+            legend_fontweight='bold',
+            palette=color_map,
+            frameon=False,
+            title=f"{color}: {highlight_group[0]}",
+            size=None
+        )
+
+    # --- RETURN LOGIC ---
+    if show:
+        plt.show()
+        return None
+    else:
+        plt.close() # Close the internal reference to prevent auto-display
+        return fig
+
+def show_all_cluster_stats(adata, sample_col='sample', cluster_col='leiden_mnc'):
+    # 1. Calculate the three distinct tables
+    # Table 1: Raw Counts (Number of cells)
+    counts = pd.crosstab(adata.obs[sample_col], adata.obs[cluster_col])
+
+    # Table 2: Row Percentages (Composition of Sample)
+    # "What % of Sample X is in Cluster Y?" -> Rows sum to 100
+    row_pct = pd.crosstab(adata.obs[sample_col], adata.obs[cluster_col], normalize='index') * 100
+
+    # Table 3: Column Percentages (Composition of Cluster)
+    # "What % of Cluster Y comes from Sample X?" -> Columns sum to 100
+    col_pct = pd.crosstab(adata.obs[sample_col], adata.obs[cluster_col], normalize='columns') * 100
+
+    # 2. Print them with FULL visibility and 3 decimal precision
+    print(f"\n{'=' * 40} TABLE 1: RAW COUNTS {'=' * 40}")
+    with pd.option_context('display.max_rows', None,
+                           'display.max_columns', None,
+                           'display.width', 2000,
+                           'display.float_format', '{:.3f}'.format):
+        print(counts)
+
+    print(f"\n{'=' * 40} TABLE 2: ROW PERCENTAGES (Sample Composition) {'=' * 40}")
+    with pd.option_context('display.max_rows', None,
+                           'display.max_columns', None,
+                           'display.width', 2000,
+                           'display.float_format', '{:.3f}'.format):
+        print(row_pct)
+
+    print(f"\n{'=' * 40} TABLE 3: COLUMN PERCENTAGES (Cluster Composition) {'=' * 40}")
+    with pd.option_context('display.max_rows', None,
+                           'display.max_columns', None,
+                           'display.width', 2000,
+                           'display.float_format', '{:.3f}'.format):
+        print(col_pct)
+
+    return counts, row_pct, col_pct
+
+
+def check_dominated_detailed(cluster_pct, threshold=50.0):
+    """
+    Identifies clusters dominated by a single sample and shows the runner-up.
+    """
+    try:
+        # List to store results
+        results = []
+
+        # Iterate through each cluster (column)
+        for cluster in cluster_pct.columns:
+            # Sort the column in descending order (highest % first)
+            sorted_col = cluster_pct[cluster].sort_values(ascending=False)
+
+            # Get Top 1
+            top1_sample = sorted_col.index[0]
+            top1_val = sorted_col.iloc[0]
+
+            # Get Top 2 (if it exists)
+            if len(sorted_col) > 1:
+                top2_sample = sorted_col.index[1]
+                top2_val = sorted_col.iloc[1]
+            else:
+                top2_sample = "None"
+                top2_val = 0.0
+
+            # Check if Top 1 exceeds threshold
+            if top1_val > threshold:
+                results.append({
+                    'Cluster': cluster,
+                    'Top_Sample': top1_sample,
+                    'Top_Pct': top1_val,
+                    'Second_Sample': top2_sample,
+                    'Second_Pct': top2_val
+                })
+
+        if not results:
+            logging.info(f"No clusters found > {threshold}%.")
+            return None
+
+        # Convert to DataFrame
+        df_results = pd.DataFrame(results)
+
+        # Sort by Top Percentage for clarity
+        df_results = df_results.sort_values('Top_Pct', ascending=False)
+
+        # Format for nice printing
+        print(f"\n{'=' * 20} DOMINATED CLUSTERS (> {threshold}%) {'=' * 20}")
+        with pd.option_context('display.max_rows', None, 'display.float_format', '{:.3f}'.format):
+            print(df_results.set_index('Cluster'))
+
+        return df_results
+
+    except Exception as e:
+        logging.error(f"Error checking detailed clusters: {e}")
+        return None
 
