@@ -45,7 +45,10 @@ rule batch_std:
         blacklist=config['path_to_blacklist'],
         n_feat=config['analysis_params']['batch']['n_features'],
         max_iter=config['analysis_params']['batch']['max_iter'],
-        n_iter=config['analysis_params']['batch']['n_iter'],
+        n_iter=config['analysis_params']['batch']['n_iter']
+    output:
+        flag_out=get_path("standard","batch","flag"),
+        h5ad_output=get_path("standard","batch","h5ad_output"),
 
         # --- 1. Diagnostics ---
         png_eigen=report(
@@ -84,10 +87,6 @@ rule batch_std:
             category="Batch Correction",
             subcategory="Harmony"
         )
-
-    output:
-        flag_out=get_path("standard","batch","flag"),
-        h5ad_output=get_path("standard","batch","h5ad_output")
     log:
         get_path("standard","batch","log")
     conda: '../envs/snapatac2_env.yaml'
@@ -100,12 +99,12 @@ rule batch_std:
         {params.n_feat} \
         {params.max_iter} \
         {params.n_iter} \
-        {params.png_eigen} \
-        {params.png_pre} \
-        {params.png_mnc_s} \
-        {params.png_mnc_l} \
-        {params.png_harm_s} \
-        {params.png_harm_l} \
+        {output.png_eigen} \
+        {output.png_pre} \
+        {output.png_mnc_s} \
+        {output.png_mnc_l} \
+        {output.png_harm_s} \
+        {output.png_harm_l} \
         {output.flag_out} \
         {output.h5ad_output} \
         > {log} 2>&1

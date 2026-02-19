@@ -76,39 +76,39 @@ rule sample_qc_filter:
 
 
 
-
-
-
-
-# --- 2. Metadata Branch ---
-rule merge_meta:
-    input:
-        adatas = expand(
-            os.path.join(config['results_dir'], config['branches']['metadata']['constrain']['dir'], "{sample}.h5ad"),
-            sample=config['samples']
-        )
-    output:
-        AnnDataSet = get_path("metadata", "merge", "AnnDataSet"),
-        flag       = get_path("metadata", "merge", "flag")
-    log:
-        get_path("metadata", "merge", "log")
-    conda: '../envs/magic_env.yaml'
-    shell:
-        "python scripts/3.1.Merge_AnnData.py {input.adatas}  {output.AnnDataSet} {output.flag} > {log} 2>&1"
-
-
-# --- 3. DG_Subset Branch ---
-rule merge_DGsub:
-    input:
-        adatas = expand(
-            get_path("DG_Subset", "subset", "h5ad"),
-            sample=config['samples']
-        )
-    output:
-        AnnDataSet = get_path("DG_Subset", "merge", "AnnDataSet"),
-        flag       = get_path("DG_Subset", "merge", "flag")
-    log:
-        get_path("DG_Subset", "merge", "log")
-    conda: '../envs/magic_env.yaml'
-    shell:
-        "python scripts/3.1.Merge_AnnData.py {input.adatas} {output.AnnDataSet} {output.flag} > {log} 2>&1"
+#
+#
+#
+#
+# # --- 2. Metadata Branch ---
+# rule merge_meta:
+#     input:
+#         adatas = expand(
+#             os.path.join(config['results_dir'], config['branches']['metadata']['constrain']['dir'], "{sample}.h5ad"),
+#             sample=config['samples']
+#         )
+#     output:
+#         AnnDataSet = get_path("metadata", "merge", "AnnDataSet"),
+#         flag       = get_path("metadata", "merge", "flag")
+#     log:
+#         get_path("metadata", "merge", "log")
+#     conda: '../envs/magic_env.yaml'
+#     shell:
+#         "python scripts/3.1.Merge_AnnData.py {input.adatas}  {output.AnnDataSet} {output.flag} > {log} 2>&1"
+#
+#
+# # --- 3. DG_Subset Branch ---
+# rule merge_DGsub:
+#     input:
+#         adatas = expand(
+#             get_path("DG_Subset", "subset", "h5ad"),
+#             sample=config['samples']
+#         )
+#     output:
+#         AnnDataSet = get_path("DG_Subset", "merge", "AnnDataSet"),
+#         flag       = get_path("DG_Subset", "merge", "flag")
+#     log:
+#         get_path("DG_Subset", "merge", "log")
+#     conda: '../envs/magic_env.yaml'
+#     shell:
+#         "python scripts/3.1.Merge_AnnData.py {input.adatas} {output.AnnDataSet} {output.flag} > {log} 2>&1"
