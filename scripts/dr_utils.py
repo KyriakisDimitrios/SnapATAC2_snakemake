@@ -8,9 +8,23 @@ import pandas as pd
 import scanpy as sc
 import snapatac2 as snap
 
+from functools import reduce, partial
+from typing import Union  # Added for older Python compatibility
 import multiprocessing as mp
+
 import logging
 import time
+from concurrent.futures import ThreadPoolExecutor
+
+# Run the sequential mapped function.
+# Note: For the real run, leave sample_size=None to process the full matrix,
+# or set it to a very large number (e.g., 50000) if you need the speed bump.
+import multiprocessing
+from functools import partial, reduce
+from concurrent.futures import ThreadPoolExecutor
+
+
+
 import concurrent.futures
 from tqdm.auto import tqdm
 # --- Logger Configuration ---
@@ -139,3 +153,65 @@ def mapped_robust_features_sequential(
     return np.array(list(final_features))
 
 
+def get_hpc_resources(n_folds_actual, n_fold_jobs_manual):
+    """
+    Simpler version: Caps parallel jobs and distributes all CPUs.
+    """
+    total_cores = multiprocessing.cpu_count()
+
+    # Cap the parallel jobs by the actual number of folds
+    n_fold_jobs = min(n_fold_jobs_manual, n_folds_actual)
+
+    # Divide all cores among the active fold jobs
+    n_jobs_per_fold = max(1, total_cores // n_fold_jobs)
+
+    logging.info(f"HPC Budget: {total_cores} cores total.")
+    logging.info(f"Running {n_fold_jobs} fold(s) at once.")
+    logging.info(f"Each fold gets {n_jobs_per_fold} cores.")
+
+    return n_fold_jobs, n_jobs_per_fold
+
+
+
+def mapped_robust_features(
+        memory_folds,
+        n_features=100000,
+        sample_size=None,
+        n_jobs_per_fold=-1,  # Internal math threads (Harmony/KNN)
+        n_fold_jobs=1,  # Outer level: how many folds to run at once
+        n_neighbors=15,
+        leiden_res=3.0,
+        n_top_markers=2000
+):
+    """
+    Modular feature extraction with dual-level threading control.
+    """
+    logging.info(f"Mapping pipeline across {len(memory_folds)} folds using {n_fold_jobs} workers...")
+
+    worker = partial(
+        _extract_fold_markers,
+        n_features=n_features,
+        sample_size=sample_size,
+        n_jobs=n_jobs_per_fold,
+        n_neighbors=n_neighbors,
+        leiden_res=leiden_res,
+        n_top_markers=n_top_markers
+    )
+
+    # Use ThreadPoolExecutor to manage the 'Outer' fold jobs
+    with ThreadPoolExecutor(max_workers=n_fold_jobs) as executor:
+        # executor.map is the functional way to handle this
+        fold_results = list(executor.map(worker, memory_folds))
+
+    final_features = reduce(lambda a, b: a.union(b), fold_results)
+
+    logging.info(f"Mapping complete. Extracted {len(final_features)} robust features.")
+    return np.array(list(final_features))
+
+# --- PRO USAGE ---
+# To run safely (Sequential):
+# robust_features = mapped_robust_features(memory_folds, n_fold_jobs=1, n_jobs_per_fold=-1)
+
+# To run aggressively (Parallel):
+# If you have 64 cores and 5 folds, maybe do 2 folds at a time with 32 cores each:
+# robust_features = mapped_robust_features(memory_folds, n_fold_jobs=2, n_jobs_per_fold=32)

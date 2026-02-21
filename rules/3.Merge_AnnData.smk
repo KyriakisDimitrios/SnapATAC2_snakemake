@@ -1,11 +1,35 @@
-# --- 1. Standard Branch ---
+# # --- 1. Standard Branch ---
+# rule merge_std:
+#     input:
+#         adatas = expand(
+#             get_path("standard", "feature_qc", "dir") + "{sample}.h5ad",
+#             sample=config['samples']
+#         ),
+#         annotation_gff3_file = config['genome_annot']
+#     output:
+#         AnnDataSet = get_path("standard", "merge", "AnnDataSet"),
+#         flag       = get_path("standard", "merge", "flag")
+#     log:
+#         get_path("standard", "merge", "log")
+#     conda: '../envs/magic_env.yaml'
+#     shell:
+#         "python scripts/3.1.Merge_AnnData.py {input.annotation_gff3_file} {output.AnnDataSet} {output.flag}  {input.adatas} > {log} 2>&1"
+# --- 3. Merge AnnData (Standard Branch) ---
 rule merge_std:
     input:
         adatas = expand(
             get_path("standard", "feature_qc", "dir") + "{sample}.h5ad",
             sample=config['samples']
         ),
-        annotation_gff3_file = config['genome_annot']
+        features_txt = expand(
+            get_path("standard", "feature_qc", "dir") + "{sample}_features.txt",
+            sample=config['samples']
+        ),
+        annotation_gff3_file = config['genome_annot'],
+        # The crucial dependency that connects this to Rule 1.5
+        outliers_csv = os.path.join(config['results_dir_path'], "project_possible_outliers.csv")
+    params:
+        n_samples = len(config['samples'])
     output:
         AnnDataSet = get_path("standard", "merge", "AnnDataSet"),
         flag       = get_path("standard", "merge", "flag")
@@ -13,7 +37,48 @@ rule merge_std:
         get_path("standard", "merge", "log")
     conda: '../envs/magic_env.yaml'
     shell:
-        "python scripts/3.1.Merge_AnnData.py {input.annotation_gff3_file} {output.AnnDataSet} {output.flag}  {input.adatas} > {log} 2>&1"
+        """
+        python scripts/3.1.Merge_AnnData.py \
+        {input.annotation_gff3_file} \
+        {output.AnnDataSet} \
+        {output.flag} \
+        {input.outliers_csv} \
+        {params.n_samples} \
+        {input.adatas} \
+        {input.features_txt} \
+        > {log} 2>&1
+        """
+
+# rule merge_std:
+#     input:
+#         adatas = expand(
+#             get_path("standard", "feature_qc", "dir") + "{sample}.h5ad",
+#             sample=config['samples']
+#         ),
+#         features_txt = expand(
+#             get_path("standard", "feature_qc", "dir") + "{sample}_features.txt",
+#             sample=config['samples']
+#         ),
+#         annotation_gff3_file = config['genome_annot']
+#     params:
+#         n_samples = len(config['samples'])
+#     output:
+#         AnnDataSet = get_path("standard", "merge", "AnnDataSet"),
+#         flag       = get_path("standard", "merge", "flag")
+#     log:
+#         get_path("standard", "merge", "log")
+#     conda: '../envs/magic_env.yaml'
+#     shell:
+#         """
+#         python scripts/3.1.Merge_AnnData.py \
+#         {input.annotation_gff3_file} \
+#         {output.AnnDataSet} \
+#         {output.flag} \
+#         {params.n_samples} \
+#         {input.adatas} \
+#         {input.features_txt} \
+#         > {log} 2>&1
+#         """
 
 # --- 2. Add Metadata (New Rule) ---
 rule add_metadata:

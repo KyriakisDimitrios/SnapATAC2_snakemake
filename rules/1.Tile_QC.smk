@@ -13,7 +13,7 @@ rule tile_qc_std:
         raw_stats= get_path("standard", "tile_qc", "raw_qc")
     log:
         get_path("standard", "tile_qc", "log")
-    conda: '../envs/magic_env.yaml'
+    conda: '../envs/snapatac2_env.yaml'
     shell:
         """
         python scripts/1.Tile_QC.py \
@@ -26,6 +26,29 @@ rule tile_qc_std:
         {output.raw_stats} \
         > {log} 2>&1
         """
+
+rule compile_qc_stats_std:
+    input:
+        # Snakemake waits for all sample-specific CSVs to be generated
+        qc_stats = expand(
+            get_path("standard","tile_qc","raw_qc"),
+            sample=config['samples']
+        )
+    output:
+        # The final master table for the entire project
+        master_qc=os.path.join(config['results_dir_path'],"project_raw_qc_summary.csv")
+    log:
+        # Adjust log path to match your structure
+        os.path.join(config['results_dir_path'],"logs","compile_qc_stats.log")
+    conda: '../envs/snapatac2_env.yaml'
+    shell:
+        """
+        python scripts/1.5.Compile_QC_Stats.py \
+        {output.master_qc} \
+        {input.qc_stats} \
+        > {log} 2>&1
+        """
+
 #
 # # --- 1. Tile & QC (Standard Branch) ---
 # rule tile_qc_std:
