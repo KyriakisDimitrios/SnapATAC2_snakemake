@@ -27,6 +27,7 @@ rule tile_qc_std:
         > {log} 2>&1
         """
 
+
 rule compile_qc_stats_std:
     input:
         # Snakemake waits for all sample-specific CSVs to be generated
@@ -36,7 +37,9 @@ rule compile_qc_stats_std:
         )
     output:
         # The final master table for the entire project
-        master_qc=os.path.join(config['results_dir_path'],"project_raw_qc_summary.csv")
+        master_qc=os.path.join(config['results_dir_path'],"project_raw_qc_summary.csv"),
+        # EXPLICITLY TELL SNAKEMAKE THIS RULE MAKES THE OUTLIERS FILE
+        outliers_csv=os.path.join(config['results_dir_path'],"project_possible_outliers.csv")
     log:
         # Adjust log path to match your structure
         os.path.join(config['results_dir_path'],"logs","compile_qc_stats.log")
