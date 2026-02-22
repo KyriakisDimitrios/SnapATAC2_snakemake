@@ -13,8 +13,10 @@ import logging
 import time
 import concurrent.futures
 from tqdm.auto import tqdm
-from dr_utils import *
-
+from dr_utils import load_data_to_memory
+from dr_utils import split_to_memory_folds
+from dr_utils import mapped_robust_features
+from dr_utils import get_hpc_resources
 
 # Hide the specific Polars DeprecationWarning from SnapATAC2
 warnings.filterwarnings("ignore", category=DeprecationWarning, message=".*_import_from_c.*")
@@ -36,8 +38,8 @@ logging.info("Started: Batch_Correction")
 # We expect exactly 14 arguments from the Snakemake rule
 try:
     args = sys.argv[1:]
-    if len(args) != 14:
-        raise ValueError(f"Expected 14 arguments, got {len(args)}")
+    if len(args) != 16:
+        raise ValueError(f"Expected 16 arguments, got {len(args)}")
 
     (h5ad_input,
      batch_var,
@@ -79,13 +81,17 @@ dat_mem = load_data_to_memory(h5ad_input)
 memory_folds = split_to_memory_folds(dat_mem=dat_mem, batch_var = batch_var, n_folds=n_folds, cells_per_sample=cells_per_sample_fold)
 
 
-# Run the sequential mapped function.
-# Note: For the real run, leave sample_size=None to process the full matrix,
-# or set it to a very large number (e.g., 50000) if you need the speed bump.
-robust_features = mapped_robust_features_sequential(memory_folds,
-                                                    n_features=n_features,
-                                                    sample_size=None)
+# --- Execution Logic ---
+n_folds_actual = len(memory_folds)
+n_fold_jobs, n_jobs_per_fold = get_hpc_resources(n_folds_actual, n_folds_actual)
 
+robust_features = mapped_robust_features(
+    memory_folds,
+    n_fold_jobs=n_fold_jobs,
+    n_jobs_per_fold=n_jobs_per_fold,
+    n_features=n_features,
+    sample_size=None # High precision
+)
 
 # Apply the mathematically verified features to your master dataset
 logging.info("Applying robust features to master dataset...")
@@ -137,6 +143,9 @@ snap.pl.umap(dat_mem, color="sample", use_rep="X_umap_harmony", out_file=png_har
 snap.pl.umap(dat_mem, color='leiden_harmony', use_rep="X_umap_harmony", out_file=png_harm_l, height=500, width=500, show=False)
 
 
+dat_mem.write("robust_itr_batch_harmony.h5ad", compression="gzip")
+
+
 # --- 5. MNC Correction ---
 logging.info("Running MNC batch correction...")
 snap.pp.mnc_correct(dat_mem,
@@ -177,6 +186,19 @@ np.savetxt(
 
 )
 
+
+dat_mem.write("robust_itr_batch_all.h5ad", compression="gzip")
+
+
 dat_mem.write(h5ad_output, compression="gzip")
 
+# Create the flag file that Snakemake is looking for
+with open(flag_output, 'w') as f:
+    f.write("done\n")
+logging.info(f"Flag file created at {flag_output}")
+
 logging.info(f"Completed Successful")
+
+
+end_time = time.time()
+logging.info(f"Finished. Total time: {end_time - start_time:.2f}s")

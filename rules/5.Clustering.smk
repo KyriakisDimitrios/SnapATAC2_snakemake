@@ -1,3 +1,26 @@
+rule iterative_clustering_std:
+    input:
+        merged_h5ad=get_path("standard","merge","AnnDataSet")
+    output:
+        # Dynamically creates a separate folder for harmony vs mnc outputs
+        annotations_csv=os.path.join(config['results_dir_path'],"clustering","{algorithm}","iterative_annotations.csv")
+    params:
+        batch_key=config['analysis_params']['clustering']['batch_key'],
+        algorithm="{algorithm}"
+    log:
+        os.path.join(config['results_dir_path'],"Logs","iterative_clustering_{algorithm}.log")
+    conda: '../envs/magic_env.yaml'
+    shell:
+        """
+        python scripts/5.Iterative_Clustering.py \
+        {input.merged_h5ad} \
+        {output.annotations_csv} \
+        {params.batch_key} \
+        {params.algorithm} \
+        > {log} 2>&1
+        """
+
+
 # --- 1. Standard Branch ---
 rule cluster_std:
     input:
