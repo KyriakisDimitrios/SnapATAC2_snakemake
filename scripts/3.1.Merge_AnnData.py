@@ -23,11 +23,12 @@ try:
     annotation_gff3_file = sys.argv[1]
     AnnDataSet_path = sys.argv[2]
     flag_file = sys.argv[3]
-    n_samples = int(sys.argv[4])
+    outliers_csv = sys.argv[4]
+    n_samples = int(sys.argv[5])
 
     # Slice the sys.argv list using the known number of samples
-    processed_adatas = sys.argv[5: 5 + n_samples]
-    features_txt = sys.argv[5 + n_samples: 5 + 2 * n_samples]
+    processed_adatas = sys.argv[6: 6 + n_samples]
+    features_txt = sys.argv[6 + n_samples: 6 + 2 * n_samples]
 
 except Exception as e:
     logging.error(f"Argument parsing failed: {e}")
@@ -38,8 +39,8 @@ logging.info(f"Initial samples provided: {n_samples}")
 # --- Outlier Exclusion (The "Ghost Merge" Bypass) ---
 # Assuming the outliers file is in standard results dir. Adjust if necessary.
 # We infer the directory from AnnDataSet_path (e.g., results/standard/merge/...)
-base_results_dir = os.path.dirname(os.path.dirname(AnnDataSet_path))
-outliers_csv = os.path.join(base_results_dir, "project_possible_outliers.csv")
+# base_results_dir = os.path.dirname(os.path.dirname(AnnDataSet_path))
+# outliers_csv = os.path.join(base_results_dir, "project_possible_outliers.csv")
 
 bad_samples = set()
 if os.path.exists(outliers_csv):
