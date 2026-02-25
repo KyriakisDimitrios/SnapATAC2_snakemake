@@ -1,0 +1,16 @@
+name: scvi_integration_env
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - pandas
+  - matplotlib
+  - anndata
+  - scanpy
+  - umap-learn
+  - pytorch
+  - pip
+  - pip:
+    - scvi-tools==1.4.1

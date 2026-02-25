@@ -72,6 +72,11 @@ structure:
         work_dir: "07.peaks/"
         h5ad: "07.peaks/Peak_Matrix.h5ad"
         log: "Logs/07.peaks.log"
+    annotate_by_integrate:
+        work_dir: "08.annotate_by_integrate/"
+        csv_output: "08.annotate_by_integrate/08.annotate_by_integrate.csv"
+        flag: "flags/08.annotate_by_integrate.done"
+        log: "Logs/08.annotate_by_integrate.log"
 
 # --- Branch Definitions ---
 branches:
@@ -143,6 +148,16 @@ analysis_params:
         remove_ribo: False
         remove_sex_genes: True
         only_coding_genes: True
+    annotate_by_integrate:
+        reference_h5ad: "241004_FreshMG_freeze3_MicroPVM_ADAM_CECR2_taxonomy_final-Copy1.h5ad"
+        ref_celltype_col: "subtype"
+        min_cells: 5
+        n_top_genes: 5000
+        n_layers: 2
+        n_latent: 30
+        max_epochs_scvi: 1000
+        max_epochs_scanvi: 1000
+        n_samples_per_label: 100
 
 # --- Benchmarks ---
 benchmarks:
