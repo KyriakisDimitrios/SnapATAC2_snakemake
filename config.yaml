@@ -53,6 +53,12 @@ structure:
         h5ad_output: "04.batch_correction/Merged_WithMetadata_Batch.h5ad"
         flag: "flags/batch.done"
         log: "Logs/04.batch_correction.log"
+    filter_dr_cl:
+        dir: "05.filter_dr_cl/"
+        batch_var: 'sample'
+        h5ad_output: "05.filter_dr_cl/Merged_WithMetadata_Batch_Filtered.h5ad"
+        flag: "flags/05.filter_dr_cl.done"
+        log: "Logs/05.filter_dr_cl.log"
     clustering:
         dir: "05.clustering/"
         h5ad: "05.clustering/Clustered.h5ad.gz"
@@ -101,7 +107,7 @@ analysis_params:
     feature_qc:
         filter_lower_quantile: 0.005
         filter_upper_quantile: 0.005
-        n_features: 200000
+        n_features: 50000
     sample_qc_filter:
         min_mean_tsse: 7
     batch:
@@ -111,8 +117,18 @@ analysis_params:
         n_features: 250000
         max_iter: 4
         n_iter: 1
+    filter_dr_cl:
+        batch_var: 'sample'
+        n_features: 100000
+        max_iter: 4
+        n_iter: 1
+        exclude_clusters: '29,31,32,34,36'
     clustering:
         resolutions: '0.3,0.5,0.8,1,1.3,1.5,1.8,2'
+        batch_algorithms:
+            - harmony
+            - mnc
+        batch_key: "sample"
     gem:
         min_cells: 10
         flavor: 'seurat_v3'
